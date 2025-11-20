@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "outDir": "temp/scripts",
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["scripts/**/*.ts"]
+}
+

@@ -1,0 +1,202 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String        @id
+  email            String?       @unique
+  display_name     String?
+  default_currency String
+  locale           String        @default("en-US")
+  week_starts_on   Int           @default(1)
+  telemetry_opt_in Boolean       @default(false)
+  accounts         Account[]
+  categories       Category[]
+  transactions     Transaction[]
+  budgets          Budget[]
+  goals            Goal[]
+  reminders        Reminder[]
+  syncStates       SyncState[]
+  reportCaches     ReportCache[]
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+}
+
+model Account {
+  id               String        @id
+  user_id          String
+  user             User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  name             String
+  type             String        @default("checking")
+  currency         String
+  balance_cents    Int           @default(0)
+  institution      String?
+  color_token      String?
+  sync_external_id String?
+  transactions     Transaction[]
+  reminders        Reminder[]
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+
+  @@index([user_id])
+}
+
+model Category {
+  id           String        @id
+  user_id      String
+  user         User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  name         String
+  type         String
+  parent_id    String?
+  parent       Category?     @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children     Category[]    @relation("CategoryHierarchy")
+  transactions Transaction[]
+  budgets      Budget[]
+  goals        Goal[]
+  sort_order   Int           @default(0)
+  icon         String?
+  archived     Boolean       @default(false)
+  created_at   DateTime      @default(now())
+
+  @@index([user_id, type])
+}
+
+model Transaction {
+  id              String          @id
+  user_id         String
+  account_id      String
+  category_id     String?
+  goal_id         String?
+  user            User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  account         Account         @relation(fields: [account_id], references: [id], onDelete: Cascade)
+  category        Category?       @relation(fields: [category_id], references: [id])
+  goal            Goal?           @relation(fields: [goal_id], references: [id])
+  type            String
+  amount_cents    Int
+  currency        String
+  exchange_rate   Float?
+  occurred_on     DateTime
+  cleared         Boolean         @default(false)
+  notes           String?
+  tags            String?
+  attachment_path String?
+  recurrence_id   String?
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+
+  @@index([user_id, occurred_on])
+  @@index([category_id, occurred_on])
+}
+
+model Budget {
+  id              String        @id
+  user_id         String
+  user            User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  name            String
+  period          String
+  type            String
+  category_id     String?
+  category        Category?     @relation(fields: [category_id], references: [id])
+  amount_cents    Int
+  start_date      DateTime
+  end_date        DateTime
+  rollover        Boolean       @default(false)
+  alert_threshold Float         @default(0.8)
+  entries         BudgetEntry[]
+  created_at      DateTime      @default(now())
+
+  @@index([user_id, period, start_date])
+}
+
+model BudgetEntry {
+  id              String   @id
+  budget_id       String
+  budget          Budget   @relation(fields: [budget_id], references: [id], onDelete: Cascade)
+  actual_cents    Int
+  projected_cents Int
+  snapshot_date   DateTime
+  created_at      DateTime @default(now())
+
+  @@unique([budget_id, snapshot_date])
+}
+
+model Goal {
+  id            String     @id
+  user_id       String
+  user          User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  name          String
+  target_cents  Int
+  current_cents Int        @default(0)
+  target_date   DateTime?
+  category_id   String?
+  category      Category?  @relation(fields: [category_id], references: [id])
+  priority      Int        @default(0)
+  status        String     @default("active")
+  transactions  Transaction[]
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+
+  @@index([user_id, status])
+}
+
+model Reminder {
+  id               String         @id
+  user_id          String
+  user             User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  account_id       String?
+  account          Account?       @relation(fields: [account_id], references: [id])
+  amount_cents     Int?
+  due_at           DateTime
+  recurrence_rule  String?
+  next_fire_at     DateTime?
+  channel          String         @default("toast")
+  snooze_minutes   Int?           @default(0)
+  last_triggered_at DateTime?
+  status           String         @default("scheduled")
+  logs             ReminderLog[]
+  created_at       DateTime       @default(now())
+
+  @@index([user_id, next_fire_at])
+}
+
+model ReminderLog {
+  id          String            @id
+  reminder_id String
+  reminder    Reminder          @relation(fields: [reminder_id], references: [id], onDelete: Cascade)
+  action      String
+  metadata    String?
+  created_at  DateTime          @default(now())
+}
+
+model SyncState {
+  id                String   @id
+  user_id           String
+  user              User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  entity_name       String
+  last_local_change DateTime?
+  last_remote_cursor String?
+  updated_at        DateTime @updatedAt
+
+  @@unique([user_id, entity_name])
+}
+
+model ReportCache {
+  id         String   @id
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  key        String
+  payload    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@unique([user_id, key])
+}
+

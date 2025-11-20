@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Core permissions for the main window to reach app data, dialogs, and tray features",
+  "platforms": ["windows", "linux", "macOS"],
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:path:default",
+    "core:window:default",
+    "core:menu:default",
+    "core:tray:default"
+  ]
+}
+

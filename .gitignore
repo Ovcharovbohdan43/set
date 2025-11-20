@@ -1,0 +1,16 @@
+node_modules
+dist
+.DS_Store
+coverage
+temp
+*.log
+.turbo
+src-tauri/target
+src-tauri/.cargo
+src-tauri/gen
+tests/e2e/playwright-report
+tests/e2e/test-results
+.env
+dev.db
+.cursor/
+
