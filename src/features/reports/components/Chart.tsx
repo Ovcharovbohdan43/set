@@ -122,6 +122,9 @@ export async function exportChartAsPng(chart: echarts.ECharts): Promise<string> 
   
   // Extract base64 data from data URL
   const base64 = dataUrl.split(',')[1];
+  if (!base64) {
+    throw new Error('Failed to extract base64 data from chart');
+  }
   return base64;
 }
 

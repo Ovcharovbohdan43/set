@@ -9,23 +9,24 @@ datasource db {
 }
 
 model User {
-  id               String        @id
-  email            String?       @unique
-  display_name     String?
-  default_currency String
-  locale           String        @default("en-US")
-  week_starts_on   Int           @default(1)
-  telemetry_opt_in Boolean       @default(false)
-  accounts         Account[]
-  categories       Category[]
-  transactions     Transaction[]
-  budgets          Budget[]
-  goals            Goal[]
-  reminders        Reminder[]
-  syncStates       SyncState[]
-  reportCaches     ReportCache[]
-  created_at       DateTime      @default(now())
-  updated_at       DateTime      @updatedAt
+  id                String        @id
+  email             String?       @unique
+  display_name      String?
+  default_currency  String
+  locale            String        @default("en-US")
+  week_starts_on    Int           @default(1)
+  telemetry_opt_in  Boolean       @default(false)
+  theme_preference  String?       @default("auto")
+  accounts          Account[]
+  categories        Category[]
+  transactions      Transaction[]
+  budgets           Budget[]
+  goals             Goal[]
+  reminders         Reminder[]
+  syncStates        SyncState[]
+  reportCaches      ReportCache[]
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
 }
 
 model Account {

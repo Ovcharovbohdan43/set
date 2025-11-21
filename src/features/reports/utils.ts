@@ -32,7 +32,15 @@ export function getCurrentMonth(): string {
  * Get previous month in YYYY-MM format
  */
 export function getPreviousMonth(month: string): string {
-  const [year, monthNum] = month.split('-').map(Number);
+  const parts = month.split('-');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
+  const year = Number(parts[0]);
+  const monthNum = Number(parts[1]);
+  if (isNaN(year) || isNaN(monthNum)) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
   const date = new Date(year, monthNum - 1, 1);
   date.setMonth(date.getMonth() - 1);
   const prevYear = date.getFullYear();
@@ -44,7 +52,15 @@ export function getPreviousMonth(month: string): string {
  * Get next month in YYYY-MM format
  */
 export function getNextMonth(month: string): string {
-  const [year, monthNum] = month.split('-').map(Number);
+  const parts = month.split('-');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
+  const year = Number(parts[0]);
+  const monthNum = Number(parts[1]);
+  if (isNaN(year) || isNaN(monthNum)) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
   const date = new Date(year, monthNum - 1, 1);
   date.setMonth(date.getMonth() + 1);
   const nextYear = date.getFullYear();
@@ -56,7 +72,15 @@ export function getNextMonth(month: string): string {
  * Format month string for display (e.g., "2025-01" -> "January 2025")
  */
 export function formatMonth(month: string): string {
-  const [year, monthNum] = month.split('-').map(Number);
+  const parts = month.split('-');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
+  const year = Number(parts[0]);
+  const monthNum = Number(parts[1]);
+  if (isNaN(year) || isNaN(monthNum)) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
   const date = new Date(year, monthNum - 1, 1);
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
@@ -65,7 +89,15 @@ export function formatMonth(month: string): string {
  * Get date range for a month (start and end dates)
  */
 export function getMonthDateRange(month: string): { startDate: string; endDate: string } {
-  const [year, monthNum] = month.split('-').map(Number);
+  const parts = month.split('-');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
+  const year = Number(parts[0]);
+  const monthNum = Number(parts[1]);
+  if (isNaN(year) || isNaN(monthNum)) {
+    throw new Error(`Invalid month format: ${month}`);
+  }
   const startDate = new Date(year, monthNum - 1, 1);
   const endDate = new Date(year, monthNum, 0); // Last day of the month
 

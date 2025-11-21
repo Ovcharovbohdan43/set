@@ -1,6 +1,5 @@
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -112,7 +111,8 @@ pub async fn export_report_encrypted_json(
         let json = serde_json::to_string(&report)
             .map_err(|e| format!("Failed to serialize report: {}", e))?;
         
-        let encoded = base64::encode(json.as_bytes());
+        use base64::{Engine as _, engine::general_purpose};
+        let encoded = general_purpose::STANDARD.encode(json.as_bytes());
         
         let encrypted_payload = serde_json::json!({
             "version": "1.0",
@@ -151,7 +151,8 @@ pub async fn export_chart_png(
 
     spawn_blocking(move || {
         // Decode base64 PNG data from ECharts
-        let image_data = base64::decode(&chart_data_base64)
+        use base64::{Engine as _, engine::general_purpose};
+        let image_data = general_purpose::STANDARD.decode(&chart_data_base64)
             .map_err(|e| format!("Failed to decode base64 image: {}", e))?;
 
         fs::write(&file_path, image_data)

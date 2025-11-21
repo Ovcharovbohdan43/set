@@ -96,8 +96,8 @@ describe('reports/utils', () => {
 
       const top2 = getTopCategories(categories, 2);
       expect(top2).toHaveLength(2);
-      expect(top2[0].categoryName).toBe('D');
-      expect(top2[1].categoryName).toBe('B');
+      expect(top2[0]?.categoryName).toBe('D');
+      expect(top2[1]?.categoryName).toBe('B');
     });
 
     it('should return all categories if limit is greater than array length', () => {

@@ -71,7 +71,7 @@ impl SqliteTransactionService {
 
         if !user_exists {
             conn.execute(
-                "INSERT INTO \"User\" (id, default_currency, locale, week_starts_on, telemetry_opt_in, created_at, updated_at) VALUES (?, 'USD', 'en-US', 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                "INSERT INTO \"User\" (id, default_currency, locale, week_starts_on, telemetry_opt_in, theme_preference, created_at, updated_at) VALUES (?, 'USD', 'en-US', 1, 0, 'auto', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 params![self.user_id],
             )
             .map_err(|err| TransactionServiceError::Database(format!("Failed to create default user: {}", err)))?;
@@ -420,7 +420,7 @@ impl TransactionService for SqliteTransactionService {
         let conn = self.connection()?;
         let mut stmt = conn
             .prepare(
-                r#"SELECT id, name, type 
+                r#"SELECT id, name, type, sort_order 
                    FROM "Category" WHERE user_id = ? AND archived = 0 
                    ORDER BY sort_order, name"#,
             )
@@ -432,6 +432,7 @@ impl TransactionService for SqliteTransactionService {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     category_type: row.get(2)?,
+                    sort_order: row.get(3)?,
                 })
             })
             .map_err(|err| TransactionServiceError::Database(err.to_string()))?

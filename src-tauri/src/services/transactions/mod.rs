@@ -28,6 +28,7 @@ pub struct CategoryDto {
     pub name: String,
     #[serde(rename = "type")]
     pub category_type: String,
+    pub sort_order: i32,
 }
 
 #[derive(Debug, Clone, Serialize)]

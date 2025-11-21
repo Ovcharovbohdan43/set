@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 
 import * as echarts from 'echarts/core';
-import type { EChartsOption } from 'echarts/core';
+import type { EChartsCoreOption } from 'echarts/core';
 
 import { formatCurrency, formatMonth, getCurrentMonth, getMonthDateRange, getNextMonth, getPreviousMonth } from '../utils';
 import { Chart } from './Chart';
@@ -26,7 +26,7 @@ export function ReportsPage() {
   const budgetChartRef = useRef<echarts.ECharts | null>(null);
 
   // Spending by Category Pie Chart
-  const spendingByCategoryOption = useMemo<EChartsOption>(() => {
+  const spendingByCategoryOption = useMemo<EChartsCoreOption>(() => {
     if (!monthlyReport) {
       return {};
     }
@@ -97,7 +97,7 @@ export function ReportsPage() {
   }, [monthlyReport]);
 
   // Monthly Trend Line Chart
-  const monthlyTrendOption = useMemo<EChartsOption>(() => {
+  const monthlyTrendOption = useMemo<EChartsCoreOption>(() => {
     if (!monthlyTrend || monthlyTrend.length === 0) {
       return {};
     }
@@ -202,7 +202,7 @@ export function ReportsPage() {
   }, [monthlyTrend]);
 
   // Income vs Expense Bar Chart
-  const incomeVsExpenseOption = useMemo<EChartsOption>(() => {
+  const incomeVsExpenseOption = useMemo<EChartsCoreOption>(() => {
     if (!monthlyReport) {
       return {};
     }
@@ -268,7 +268,7 @@ export function ReportsPage() {
   }, [monthlyReport, selectedMonth]);
 
   // Budget Progress Bar Chart
-  const budgetProgressOption = useMemo<EChartsOption>(() => {
+  const budgetProgressOption = useMemo<EChartsCoreOption>(() => {
     if (!monthlyReport || monthlyReport.budgetSummaries.length === 0) {
       return {};
     }
@@ -287,6 +287,9 @@ export function ReportsPage() {
             .map((p: any) => {
               const index = names.indexOf(p.axisValue as string);
               const budget = budgets[index];
+              if (!budget) {
+                return `${p.seriesName}: ${formatCurrency(p.value as number)}`;
+              }
               return `${p.seriesName}: ${formatCurrency(p.value as number)}<br/>
                 Progress: ${budget.progressPercent.toFixed(1)}%`;
             })
@@ -359,7 +362,10 @@ export function ReportsPage() {
             <ExportButton
               month={selectedMonth}
               report={monthlyReport}
-              spendingByCategory={monthlyReport.spendingByCategory}
+              spendingByCategory={monthlyReport.spendingByCategory.map(cat => ({
+                ...cat,
+                transactionCount: 0 // TODO: Add transactionCount from backend
+              }))}
             />
           )}
           <button

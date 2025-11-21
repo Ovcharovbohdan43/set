@@ -3,6 +3,8 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 
 import { useAppStore } from '@/store';
 
+import { ThemeProvider } from './ThemeProvider';
+
 interface Props {
   children: ReactNode;
 }
@@ -16,8 +18,10 @@ export function AppProviders({ children }: Props) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <OfflineBridge />
-      {children}
+      <ThemeProvider>
+        <OfflineBridge />
+        {children}
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

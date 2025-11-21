@@ -5,6 +5,7 @@ pub mod dashboard;
 pub mod goals;
 pub mod reminders;
 pub mod reports;
+pub mod settings;
 pub mod transactions;
 
 pub use budgets::{
@@ -26,6 +27,10 @@ pub use reminders::{
 pub use reports::{
     MonthlyReportDto, MonthlyTrendDto, ReportResult, ReportService, ReportServiceError,
     SpendingByCategoryDto, SqliteReportService,
+};
+pub use settings::{
+    SettingsService, SettingsServiceError, SettingsResult, SqliteSettingsService,
+    UpdateCategoryOrderInput, UpdateUserSettingsInput, UserSettingsDto,
 };
 pub use transactions::{
     AccountDto, CategoryDto, CreateTransactionInput, ImportTransactionsInput,
@@ -59,6 +64,7 @@ struct NoopBudgetService;
 struct NoopGoalService;
 struct NoopReminderService;
 struct NoopReportService;
+struct NoopSettingsService;
 struct NoopSyncService;
 
 impl TransactionService for NoopTransactionService {
@@ -244,6 +250,24 @@ impl ReportService for NoopReportService {
     }
 }
 
+impl SettingsService for NoopSettingsService {
+    fn descriptor(&self) -> ServiceDescriptor {
+        ServiceDescriptor::new("SettingsService", "noop")
+    }
+
+    fn get_user_settings(&self) -> SettingsResult<UserSettingsDto> {
+        not_configured_settings()
+    }
+
+    fn update_user_settings(&self, _: UpdateUserSettingsInput) -> SettingsResult<UserSettingsDto> {
+        not_configured_settings()
+    }
+
+    fn update_category_order(&self, _: UpdateCategoryOrderInput) -> SettingsResult<()> {
+        not_configured_settings()
+    }
+}
+
 impl SyncService for NoopSyncService {
     fn descriptor(&self) -> ServiceDescriptor {
         ServiceDescriptor::new("SyncService", "noop")
@@ -257,6 +281,7 @@ pub struct ServiceRegistry {
     goal: Arc<dyn GoalService>,
     reminder: Arc<dyn ReminderService>,
     report: Arc<dyn ReportService>,
+    settings: Arc<dyn SettingsService>,
     sync: Arc<dyn SyncService>,
 }
 
@@ -275,6 +300,7 @@ impl ServiceRegistry {
             goal: Arc::new(NoopGoalService),
             reminder: Arc::new(NoopReminderService),
             report: Arc::new(NoopReportService),
+            settings: Arc::new(NoopSettingsService),
             sync: Arc::new(NoopSyncService),
         }
     }
@@ -291,6 +317,7 @@ impl ServiceRegistry {
             self.goal.descriptor(),
             self.reminder.descriptor(),
             self.report.descriptor(),
+            self.settings.descriptor(),
             self.sync.descriptor(),
         ]
     }
@@ -319,6 +346,10 @@ impl ServiceRegistry {
         Arc::clone(&self.report)
     }
 
+    pub fn settings(&self) -> Arc<dyn SettingsService> {
+        Arc::clone(&self.settings)
+    }
+
     #[allow(dead_code)]
     pub fn sync(&self) -> Arc<dyn SyncService> {
         Arc::clone(&self.sync)
@@ -333,6 +364,7 @@ pub struct ServiceRegistryBuilder {
     goal: Option<Arc<dyn GoalService>>,
     reminder: Option<Arc<dyn ReminderService>>,
     report: Option<Arc<dyn ReportService>>,
+    settings: Option<Arc<dyn SettingsService>>,
     sync: Option<Arc<dyn SyncService>>,
 }
 
@@ -385,6 +417,14 @@ impl ServiceRegistryBuilder {
         self
     }
 
+    pub fn with_settings<T>(mut self, service: T) -> Self
+    where
+        T: SettingsService + 'static,
+    {
+        self.settings = Some(Arc::new(service));
+        self
+    }
+
     #[allow(dead_code)]
     pub fn with_sync<T>(mut self, service: T) -> Self
     where
@@ -408,6 +448,9 @@ impl ServiceRegistryBuilder {
                 .reminder
                 .unwrap_or_else(|| Arc::new(NoopReminderService)),
             report: self.report.unwrap_or_else(|| Arc::new(NoopReportService)),
+            settings: self
+                .settings
+                .unwrap_or_else(|| Arc::new(NoopSettingsService)),
             sync: self.sync.unwrap_or_else(|| Arc::new(NoopSyncService)),
         }
     }
@@ -446,5 +489,11 @@ fn not_configured_reminder<T>() -> ReminderResult<T> {
 fn not_configured_report<T>() -> ReportResult<T> {
     Err(ReportServiceError::Internal(
         "ReportService is not configured".to_string(),
+    ))
+}
+
+fn not_configured_settings<T>() -> SettingsResult<T> {
+    Err(SettingsServiceError::Internal(
+        "SettingsService is not configured".to_string(),
     ))
 }

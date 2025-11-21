@@ -9,7 +9,7 @@ mod state;
 
 use std::{env, io};
 
-use services::{ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteGoalService, SqliteReminderService, SqliteReportService, SqliteTransactionService};
+use services::{ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteGoalService, SqliteReminderService, SqliteReportService, SqliteSettingsService, SqliteTransactionService};
 use state::PathState;
 use tauri::Manager;
 use scheduler::ReminderScheduler;
@@ -84,6 +84,13 @@ fn main() {
             )
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
+            let settings_service = SqliteSettingsService::new(
+                paths.db_path().to_path_buf(),
+                Some(secrets.sqlcipher_key().to_string()),
+                None,
+            )
+            .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
+
             let services = ServiceRegistry::builder()
                 .with_transaction(transaction_service)
                 .with_dashboard(dashboard_service)
@@ -91,6 +98,7 @@ fn main() {
                 .with_goal(goal_service)
                 .with_reminder(reminder_service)
                 .with_report(report_service)
+                .with_settings(settings_service)
                 .build();
             let app_state = state::AppState::new(paths, secrets, services, database_url);
             app.manage(app_state);
@@ -151,7 +159,12 @@ fn main() {
             commands::export_report_csv,
             commands::export_report_json,
             commands::export_report_encrypted_json,
-            commands::export_chart_png
+            commands::export_chart_png,
+            commands::get_user_settings,
+            commands::update_user_settings,
+            commands::update_category_order,
+            commands::read_import_file,
+            commands::decrypt_encrypted_json
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -87,8 +87,23 @@ All commands executed on Windows 10 (PowerShell) after installing pnpm via `npm 
 | `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the reminder service/commands. |
 | `cargo test` | ✅ Passed | Exercises Rust unit tests for reminder logic. |
 
-## 9. Next Test Milestones
-- **Week 7**: Reports & Analytics tests.
+## 9. Settings & Data Ops (Week 8, 2025-01-20)
+- **Scope**: `SqliteSettingsService`, settings commands (`get_user_settings`, `update_user_settings`, `update_category_order`), Settings UI page (General, Appearance, Categories, Data sections), theme switcher with light/dark/auto support, telemetry toggle, category reorder placeholder.
+- **Environment Notes**: Settings are persisted in User model. Theme preference is applied immediately via `data-theme` attribute on document root. System preference detection via `prefers-color-scheme` media query when theme is set to 'auto'.
+- **Executed Commands**
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm lint` | ✅ Passed | Verified new settings components/hooks comply with ESLint + Tailwind rules. |
+| `pnpm typecheck` | ✅ Passed | Validated settings schemas, API types, and form components. |
+| `cargo fmt --check` | ✅ Passed | Ensured `SqliteSettingsService` + command modules stay formatted. |
+| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the settings service/commands. |
+| `cargo test` | ✅ Passed | Rust code compiles successfully. |
+
+- **Planned Tests**: Unit tests for settings reducers, import validation (duplicate categories, currency mismatches), integration tests for data import dry run, component tests for category reorder drag/drop and theme switch verifying CSS tokens, E2E test for locale/currency change affecting budgets/transactions formatting.
+
+## 10. Next Test Milestones
+- **Week 9**: Packaging & Sync enablement tests.
 - **Continuous**: Mirror new tests in CI by upgrading `.github/workflows/ci.yml` placeholders to real steps (e.g., `pnpm test:e2e`).
 
 ## 5. Platform Foundation (Week 1, 2025-11-20)

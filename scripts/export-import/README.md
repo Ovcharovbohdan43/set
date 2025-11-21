@@ -77,13 +77,82 @@ await invoke('export_chart_png', {
 });
 ```
 
-## Import (Planned)
-Import functionality is planned for future enhancement:
-- CSV import with validation
+## Import
+
+Import functionality is available in the Settings page (Data section):
+- CSV import with validation (Zod schema validation on frontend)
 - JSON import with schema versioning
-- Encrypted JSON decryption and import
-- Checksum verification
-- Duplicate detection and conflict resolution
+- Encrypted JSON decryption and import (requires file path access via Tauri dialog - planned for future enhancement)
+- Checksum verification for encrypted JSON
+- Validation errors displayed per row with detailed messages
+
+### CSV Import Format
+
+Expected CSV format:
+```
+date,account,category,type,amount,currency,notes
+2025-01-20,checking-account,groceries,expense,50.00,USD,Bought food
+```
+
+Fields:
+- `date`: ISO date string (YYYY-MM-DD)
+- `account`: Account ID (must exist in database)
+- `category`: Category ID (optional, can be null)
+- `type`: Transaction type (`income`, `expense`, or `transfer`)
+- `amount`: Amount as decimal (e.g., 50.00)
+- `currency`: 3-letter currency code (e.g., USD)
+- `notes`: Optional notes/description
+
+### JSON Import Format
+
+Expected JSON format:
+```json
+{
+  "transactions": [
+    {
+      "accountId": "account-id",
+      "categoryId": "category-id",
+      "type": "expense",
+      "amountCents": 5000,
+      "currency": "USD",
+      "occurredOn": "2025-01-20T00:00:00Z",
+      "notes": "Bought food"
+    }
+  ]
+}
+```
+
+Or array format:
+```json
+[
+  {
+    "accountId": "account-id",
+    "type": "expense",
+    "amountCents": 5000,
+    "currency": "USD",
+    "occurredOn": "2025-01-20T00:00:00Z"
+  }
+]
+```
+
+### Encrypted JSON Import
+
+Encrypted JSON files are decrypted and validated before import:
+1. File is read via Tauri command `decrypt_encrypted_json`
+2. Checksum is verified to detect tampering
+3. Base64-encoded data is decoded
+4. Decrypted JSON is parsed and validated with Zod
+5. Valid transactions are imported via `import_transactions` command
+
+Note: Encrypted JSON import requires file path access via Tauri dialog plugin (planned for future enhancement). Currently, CSV and regular JSON import work via browser FileReader API.
+
+### Validation & Error Handling
+
+- All transactions are validated with Zod `transactionFormSchema` before import
+- Validation errors are displayed per row with field and message
+- Invalid transactions are skipped, valid ones are imported
+- Import progress is shown with success/error counts
+- Transaction queries are invalidated after successful import to refresh UI
 
 ## Security Considerations
 - Exports are saved to user's app data directory (not accessible by other users on Windows)
@@ -98,14 +167,18 @@ Import functionality is planned for future enhancement:
 
 ## Limitations
 - PDF export is planned for future enhancement
-- Import functionality is not yet implemented
+- Encrypted JSON import requires file path access via Tauri dialog plugin (planned for future enhancement)
 - Encrypted JSON uses simple base64 encoding (not production-grade encryption)
 - Export directory must be writable by the application
+- CSV import uses FileReader API (browser) - Tauri dialog integration planned
 
 ## Modules Impacted
 - `src-tauri/src/commands/export.rs`: Export command handlers
+- `src-tauri/src/commands/import.rs`: Import command handlers (read_import_file, decrypt_encrypted_json)
 - `src/features/reports/components/ExportButton.tsx`: UI export controls
 - `src/features/reports/api.ts`: Frontend export API
+- `src/features/settings/components/sections/DataSection.tsx`: Import UI with validation
+- `src/features/settings/api.ts`: Frontend import API with validation (parseAndValidateCsv, parseAndValidateJson)
 - `src-tauri/src/state.rs`: Exports directory path resolution
 
 ## Version / Date Updated
@@ -114,3 +187,4 @@ Import functionality is planned for future enhancement:
 
 ## Changelog
 - [2025-01-20] – Added: Initial export functionality (CSV, JSON, encrypted JSON, PNG) with Tauri commands and UI integration.
+- [2025-01-20] – Added: Import functionality (CSV, JSON) with Zod validation, error reporting, and progress tracking in Settings Data section. Created Tauri commands for file reading and encrypted JSON decryption. Note: Encrypted JSON import requires Tauri dialog plugin for file path access (planned for future enhancement).

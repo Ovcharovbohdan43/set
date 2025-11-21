@@ -17,7 +17,8 @@ export type Account = z.infer<typeof accountSchema>;
 export const categorySchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: transactionTypeSchema
+  type: transactionTypeSchema,
+  sortOrder: z.number()
 });
 
 export type Category = z.infer<typeof categorySchema>;

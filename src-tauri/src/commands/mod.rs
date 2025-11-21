@@ -2,16 +2,20 @@ mod budgets;
 mod dashboard;
 mod export;
 mod goals;
+mod import;
 mod reminders;
 mod reports;
+mod settings;
 mod transactions;
 
 pub use budgets::*;
 pub use dashboard::*;
 pub use export::*;
 pub use goals::*;
+pub use import::*;
 pub use reminders::*;
 pub use reports::*;
+pub use settings::*;
 pub use transactions::*;
 
 use serde::Serialize;

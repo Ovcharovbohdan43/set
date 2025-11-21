@@ -492,7 +492,7 @@ type Mutation {
 4. **Goals**: Kanban-style board (Active/On Track/At Risk/Completed), progress bars, recommendation cards.
 5. **Reports**: Chart gallery tabs (Category donut, Trend line, Income vs expense area, Budget progress stacked bars, Goal progress gauge, Forecast line).
 6. **Reminders**: Calendar/list hybrid, upcoming timeline view, snooze/reschedule actions.
-7. **Settings**: General (currency, locale, week start), Accounts, Categories (drag to reorder), Sync, Notifications, Data (export/import), Appearance (light/dark/auto).
+7. **Settings**: General (currency, locale, week start, display name, telemetry toggle), Accounts (planned), Categories (drag to reorder - planned), Sync (planned for Stage 9), Notifications (planned), Data (export/import - export placeholders exist, import validation planned), Appearance (light/dark/auto with system preference detection). Stage 8 implementation includes `SqliteSettingsService` on Rust backend, Tauri commands for settings management, Settings UI page with sections, theme switcher with immediate application, and telemetry toggle. Theme preference is persisted in User model and applied via `data-theme` attribute on document root.
 
 ### 6.2 Component System
 - **Navigation sidebar** with collapsible groups, icons, unread indicators (notifications).

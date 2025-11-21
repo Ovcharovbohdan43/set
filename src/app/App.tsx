@@ -11,6 +11,7 @@ import { NotificationCenter } from '@/features/reminders/components/Notification
 import { RemindersPage } from '@/features/reminders/components/RemindersPage';
 import type { Reminder } from '@/features/reminders/schema';
 import { ReportsPage } from '@/features/reports/components/ReportsPage';
+import { SettingsPage } from '@/features/settings/components/SettingsPage';
 import { TransactionsPage } from '@/features/transactions/components/TransactionsPage';
 import { useAppStore } from '@/store';
 
@@ -193,6 +194,18 @@ export default function App() {
               >
                 Reports
               </NavLink>
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-1.5 font-medium transition ${
+                    isActive
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`
+                }
+              >
+                Settings
+              </NavLink>
             </nav>
           </div>
         </div>
@@ -213,6 +226,7 @@ export default function App() {
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/reminders" element={<RemindersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </Suspense>
       </main>
