@@ -152,6 +152,8 @@ pub trait BudgetService: Send + Sync {
     fn delete_budget(&self, id: &str) -> BudgetResult<()>;
     fn record_snapshot(&self, input: RecordSnapshotInput) -> BudgetResult<BudgetEntryDto>;
     #[allow(dead_code)]
-    fn calculate_budget_progress(&self, budget_id: &str) -> BudgetResult<(i64, i64, f64, BudgetStatus)>;
+    fn calculate_budget_progress(
+        &self,
+        budget_id: &str,
+    ) -> BudgetResult<(i64, i64, f64, BudgetStatus)>;
 }
-

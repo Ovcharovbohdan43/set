@@ -8,7 +8,7 @@
 - **How to Test**: Follow the multi-level strategy in Section 14 (unit → integration → e2e) and reuse the provided Vitest and Playwright templates.
 - **Limitations**: Focuses on architecture and process—not a substitute for detailed API reference docs or finalized copywriting; assumes single-tenant local storage with optional multi-device sync.
 - **Modules Impacted**: React UI, Tauri command layer, domain services, SQLite/Prisma data layer, sync engine, background scheduler, notifications, CI/CD, and packaging.
-- **Version**: 1.4.0
+- **Version**: 1.5.0
 - **Last Updated**: 2025-11-21
 
 ## Changelog
@@ -17,6 +17,7 @@
 - [2025-11-20] – Added: Dashboard/KPI implementation details (SqliteDashboardService, `get_dashboard_snapshot`, command palette & quick actions, offline indicator, weekly spend visualization, and new testing expectations).
 - [2025-01-20] – Added: Reports & Analytics implementation details (SqliteReportService with caching and forecast, ECharts visualizations, export pipeline for CSV/JSON/encrypted JSON/PNG, query optimization with indexes, and export/import documentation).
 - [2025-11-21] - Added: Packaging & Sync enablement (SqliteSyncService, Fastify sync gateway skeleton with JWT/HMAC envelopes, Settings sync UI, MSIX bundling/signing defaults, updater endpoint, CI release job, and nightly sync test workflow).
+- [2025-11-21] - Added: Hardening & Beta (telemetry opt-in/out flow guidance, crash reporting/log rotation expectations, performance targets, and beta validation references).
 
 ---
 
@@ -619,12 +620,12 @@ const chartOptions = {
 
 ## 11. Packaging & Deployment (MSIX + Updates)
 1. **Build Frontend**: `pnpm build` (Vite) outputs to `dist/`.
-2. **Tauri Build**: Configure `src-tauri/tauri.conf.json` with `"frontendDist": "../dist"`, `"devUrl": "http://localhost:5173"`, MSIX target list, and the secure `main` window wired to `capabilities/main.json`, which limits filesystem access to `$APPDATA`/`$RESOURCE` following the Context7 capability best practices.
+2. **Tauri Build**: Configure `src-tauri/tauri.conf.json` with `"frontendDist": "../dist"`, `"devUrl": "http://localhost:5173"`, MSI target list, and the secure `main` window wired to `capabilities/main.json`, which limits filesystem access to `$APPDATA`/`$RESOURCE` following the Context7 capability best practices.
 3. **Cargo Build**: Release profile uses LTO, `panic = "abort"`, `strip = true` (per Tauri guidance).
-4. **MSI/MSIX Packaging**: Use `tauri build --target x86_64-pc-windows-msvc` (MSI enabled in config; upgrade to MSIX once the toolchain supports it); CI runs `tauri-apps/tauri-action@v0` with release metadata and signed output.
-5. **Code Signing**: Sign MSIX with EV certificate (`certificateThumbprint` placeholder in config); secrets (`TAURI_PRIVATE_KEY`, `TAURI_KEY_PASSWORD`) are injected in CI and stored outside the repo.
-6. **Updates**: Updater endpoint planned; configuration deferred until the CLI schema exposes updater fields (Settings > Sync & Packaging still presents the manual trigger/status).
-7. **Distribution**: Publish via Microsoft Store optional; otherwise share signed MSIX + release notes. Nightly sync tests validate gateway compatibility before posting installers.
+4. **MSI Packaging**: `tauri build --target x86_64-pc-windows-msvc`; CI runs `tauri-apps/tauri-action@v0` with release metadata and signed output. Switch to MSIX/updater when schema/tooling allow.
+5. **Code Signing**: EV certificate (`certificateThumbprint` placeholder) with CI secrets (`TAURI_PRIVATE_KEY`, `TAURI_KEY_PASSWORD`); do not commit certs/keys.
+6. **Updates**: Updater to be enabled once schema supports it; beta uses manual installer and Settings > Sync shows manual sync, not updater trigger.
+7. **Distribution**: Signed MSI + release notes; nightly sync tests validate gateway compatibility before posting installers.
 
 ---
 

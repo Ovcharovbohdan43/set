@@ -53,4 +53,3 @@ pub async fn invalidate_report_cache(
         .map_err(|err| err.to_string())?
         .map_err(|err| err.to_string())
 }
-

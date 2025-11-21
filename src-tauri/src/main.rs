@@ -9,6 +9,7 @@ mod state;
 
 use std::{env, io};
 
+use scheduler::ReminderScheduler;
 use services::{
     ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteGoalService,
     SqliteReminderService, SqliteReportService, SqliteSettingsService, SqliteSyncService,
@@ -16,7 +17,6 @@ use services::{
 };
 use state::PathState;
 use tauri::Manager;
-use scheduler::ReminderScheduler;
 
 #[allow(clippy::needless_borrow)]
 fn main() {

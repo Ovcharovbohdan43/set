@@ -33,8 +33,8 @@ pub async fn read_import_file(
 
     spawn_blocking(move || {
         // Read file contents
-        let contents = fs::read_to_string(&file_path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+        let contents =
+            fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
         // Determine format from file extension
         let format = if file_path.ends_with(".csv") {
@@ -99,11 +99,13 @@ pub async fn decrypt_encrypted_json(
         let calculated_checksum = format!("{:x}", hasher.finish());
 
         if calculated_checksum != expected_checksum {
-            return Err("Checksum verification failed - file may be corrupted or tampered".to_string());
+            return Err(
+                "Checksum verification failed - file may be corrupted or tampered".to_string(),
+            );
         }
 
         // Decode base64
-        use base64::{Engine as _, engine::general_purpose};
+        use base64::{engine::general_purpose, Engine as _};
         let decoded_bytes = general_purpose::STANDARD
             .decode(encoded_data)
             .map_err(|e| format!("Failed to decode base64 data: {}", e))?;
@@ -115,4 +117,3 @@ pub async fn decrypt_encrypted_json(
     .await
     .map_err(|e| format!("Task join error: {}", e))?
 }
-

@@ -89,7 +89,8 @@ impl SqliteGoalService {
                 if days_remaining > 0 && current_cents < target_cents {
                     let remaining = target_cents - current_cents;
                     let daily_rate = remaining as f64 / days_remaining as f64;
-                    let projected_date = now + Duration::days((remaining as f64 / daily_rate.max(1.0)) as i64);
+                    let projected_date =
+                        now + Duration::days((remaining as f64 / daily_rate.max(1.0)) as i64);
                     return (progress, Some(projected_date.to_rfc3339()));
                 }
             }
@@ -435,11 +436,8 @@ impl GoalService for SqliteGoalService {
         let conn = self.connection()?;
         let goal = self.fetch_goal_row(&conn, goal_id)?;
         let current = self.calculate_current(&conn, goal_id)?;
-        let (progress, projected) = self.calculate_projection(
-            goal.target_cents,
-            current,
-            goal.target_date.as_deref(),
-        );
+        let (progress, projected) =
+            self.calculate_projection(goal.target_cents, current, goal.target_date.as_deref());
         Ok((progress, projected))
     }
 }
@@ -473,4 +471,3 @@ mod tests {
         assert_eq!(projected, None);
     }
 }
-

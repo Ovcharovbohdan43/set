@@ -59,8 +59,12 @@ impl SqliteTransactionService {
         }
 
         // Initialize schema
-        conn.execute_batch(include_str!("../../../../prisma/migrations/20251120193838_init/migration.sql"))
-            .map_err(|err| TransactionServiceError::Database(format!("Failed to initialize schema: {}", err)))?;
+        conn.execute_batch(include_str!(
+            "../../../../prisma/migrations/20251120193838_init/migration.sql"
+        ))
+        .map_err(|err| {
+            TransactionServiceError::Database(format!("Failed to initialize schema: {}", err))
+        })?;
 
         // Create default user if not exists
         let user_exists: bool = conn
@@ -80,7 +84,7 @@ impl SqliteTransactionService {
         }
 
         // Seed default account/category data for first-run UX
-        self.ensure_seed_data(&conn)?;
+        self.ensure_seed_data(conn)?;
 
         Ok(())
     }
@@ -186,7 +190,11 @@ impl SqliteTransactionService {
                    WHERE id = ? AND user_id = ?"#,
                 params![name, kind, order, id, self.user_id],
             )
-            .map_err(|err| TransactionServiceError::Database(format!("Failed to update category {name}: {err}")))?;
+            .map_err(|err| {
+                TransactionServiceError::Database(format!(
+                    "Failed to update category {name}: {err}"
+                ))
+            })?;
         }
 
         Ok(())

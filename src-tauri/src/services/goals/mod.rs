@@ -117,4 +117,3 @@ pub trait GoalService: Send + Sync {
     #[allow(dead_code)]
     fn calculate_projection(&self, goal_id: &str) -> GoalResult<(f64, Option<String>)>;
 }
-

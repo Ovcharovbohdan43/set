@@ -1,9 +1,7 @@
 use tauri::{async_runtime::spawn_blocking, State};
 
 use crate::{
-    services::{
-        CreateReminderInput, ReminderDto, SnoozeReminderInput, UpdateReminderInput,
-    },
+    services::{CreateReminderInput, ReminderDto, SnoozeReminderInput, UpdateReminderInput},
     state::AppState,
 };
 
@@ -17,10 +15,7 @@ pub async fn list_reminders(state: State<'_, AppState>) -> Result<Vec<ReminderDt
 }
 
 #[tauri::command]
-pub async fn get_reminder(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<ReminderDto, String> {
+pub async fn get_reminder(state: State<'_, AppState>, id: String) -> Result<ReminderDto, String> {
     let service = state.services().reminder();
     spawn_blocking(move || service.get_reminder(&id))
         .await
@@ -53,10 +48,7 @@ pub async fn update_reminder(
 }
 
 #[tauri::command]
-pub async fn delete_reminder(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+pub async fn delete_reminder(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let service = state.services().reminder();
     spawn_blocking(move || service.delete_reminder(&id))
         .await
@@ -96,4 +88,3 @@ pub async fn mark_reminder_sent(
         .map_err(|err| err.to_string())?
         .map_err(|err| err.to_string())
 }
-

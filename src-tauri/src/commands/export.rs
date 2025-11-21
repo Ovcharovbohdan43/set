@@ -20,6 +20,7 @@ pub struct ExportResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub enum ExportFormat {
     Csv,
     Json,
@@ -82,8 +83,7 @@ pub async fn export_report_json(
         let json = serde_json::to_string_pretty(&report)
             .map_err(|e| format!("Failed to serialize report: {}", e))?;
 
-        fs::write(&file_path, json)
-            .map_err(|e| format!("Failed to write JSON file: {}", e))?;
+        fs::write(&file_path, json).map_err(|e| format!("Failed to write JSON file: {}", e))?;
 
         Ok(ExportResult {
             file_path: file_path.to_string_lossy().to_string(),
@@ -110,10 +110,10 @@ pub async fn export_report_encrypted_json(
         // In production, use proper encryption (AES-GCM) with user key
         let json = serde_json::to_string(&report)
             .map_err(|e| format!("Failed to serialize report: {}", e))?;
-        
-        use base64::{Engine as _, engine::general_purpose};
+
+        use base64::{engine::general_purpose, Engine as _};
         let encoded = general_purpose::STANDARD.encode(json.as_bytes());
-        
+
         let encrypted_payload = serde_json::json!({
             "version": "1.0",
             "encrypted": true,
@@ -151,8 +151,9 @@ pub async fn export_chart_png(
 
     spawn_blocking(move || {
         // Decode base64 PNG data from ECharts
-        use base64::{Engine as _, engine::general_purpose};
-        let image_data = general_purpose::STANDARD.decode(&chart_data_base64)
+        use base64::{engine::general_purpose, Engine as _};
+        let image_data = general_purpose::STANDARD
+            .decode(&chart_data_base64)
             .map_err(|e| format!("Failed to decode base64 image: {}", e))?;
 
         fs::write(&file_path, image_data)
@@ -179,9 +180,8 @@ fn escape_csv_field(field: &str) -> String {
 fn calculate_checksum(data: &str) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    
+
     let mut hasher = DefaultHasher::new();
     data.hash(&mut hasher);
     format!("{:x}", hasher.finish())
 }
-

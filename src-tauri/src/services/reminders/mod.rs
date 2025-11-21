@@ -143,4 +143,3 @@ pub trait ReminderService: Send + Sync {
     fn get_due_reminders(&self) -> ReminderResult<Vec<ReminderDto>>;
     fn mark_reminder_sent(&self, id: &str) -> ReminderResult<ReminderDto>;
 }
-

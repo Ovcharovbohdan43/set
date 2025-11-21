@@ -88,44 +88,44 @@ export function DashboardPage() {
   );
   const budgetPercent = calculatePercent(snapshot.budgetSpentCents, snapshot.budgetTotalCents);
 
-  const actions = [
-    {
-      id: 'new-transaction',
+const actions = [
+  {
+    id: 'new-transaction',
       label: 'Add transaction',
       onSelect: () => {
         setQuickAddOpen(true);
         setPaletteOpen(false);
       },
       shortcut: 'Ctrl + N'
-    },
-    {
-      id: 'open-transactions',
+  },
+  {
+    id: 'open-transactions',
       label: 'Go to transactions workspace',
       onSelect: () => {
         navigate('/transactions');
         setPaletteOpen(false);
       },
       shortcut: 'G'
-    },
-    {
-      id: 'refresh',
+  },
+  {
+    id: 'refresh',
       label: 'Refresh dashboard data',
       onSelect: () => {
         void refetch();
         setPaletteOpen(false);
       },
       shortcut: 'R'
+  },
+  {
+    id: 'goal',
+    label: 'Add goal',
+    onSelect: () => {
+      navigate('/goals');
+      setPaletteOpen(false);
     },
-    {
-      id: 'goal',
-      label: 'Add goal (coming soon)',
-      onSelect: () => {
-        alert('Goal creation flows will ship with Stage 5.');
-        setPaletteOpen(false);
-      },
-      shortcut: 'Ctrl + Shift + G'
-    }
-  ];
+    shortcut: 'Ctrl + Shift + G'
+  }
+];
 
   const filteredActions = actions.filter((action) =>
     action.label.toLowerCase().includes(paletteQuery.toLowerCase())
@@ -135,7 +135,6 @@ export function DashboardPage() {
     <section className="space-y-6">
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-wide text-slate-500">Stage 3</p>
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
             Financial cockpit
           </h2>
@@ -193,7 +192,7 @@ export function DashboardPage() {
 
       <QuickActions
         onAddTransaction={() => setQuickAddOpen(true)}
-        onAddGoal={() => alert('Goal creation flows arrive with Stage 5.')}
+        onAddGoal={() => navigate('/goals')}
       />
 
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
@@ -331,7 +330,7 @@ function QuickActions({ onAddGoal, onAddTransaction }: QuickActionsProps) {
     <div className="grid gap-4 rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80 md:grid-cols-2">
       <button
         type="button"
-        className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-primary/10 to-transparent px-4 py-3 text-left text-slate-800 transition hover:border-primary/40 dark:border-slate-700 dark:text-slate-100"
+        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-800 transition hover:border-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         onClick={onAddTransaction}
       >
         <span>

@@ -39,9 +39,12 @@ impl SqliteSettingsService {
                 SettingsServiceError::Database(format!("Failed to open database: {}", err))
             })?;
 
-            if let Err(err) = conn.execute("PRAGMA foreign_keys = ON;", []) {
+        if let Err(err) = conn.execute("PRAGMA foreign_keys = ON;", []) {
             tracing::error!(error = %err, "Failed to enable foreign keys");
-            return Err(SettingsServiceError::Database(format!("Failed to enable foreign keys: {}", err)));
+            return Err(SettingsServiceError::Database(format!(
+                "Failed to enable foreign keys: {}",
+                err
+            )));
         }
 
         if let Some(key) = &self.db_key {
@@ -82,11 +85,13 @@ impl SqliteSettingsService {
             return Ok(());
         }
 
-        conn.execute_batch(include_str!("../../../../prisma/migrations/20251120193838_init/migration.sql"))
-            .map_err(|err| {
-                tracing::error!(error = %err, "Failed to initialize settings schema from migration");
-                SettingsServiceError::Database(format!("Failed to initialize schema: {}", err))
-            })?;
+        conn.execute_batch(include_str!(
+            "../../../../prisma/migrations/20251120193838_init/migration.sql"
+        ))
+        .map_err(|err| {
+            tracing::error!(error = %err, "Failed to initialize settings schema from migration");
+            SettingsServiceError::Database(format!("Failed to initialize schema: {}", err))
+        })?;
 
         Ok(())
     }
@@ -106,7 +111,12 @@ impl SqliteSettingsService {
                 r#"ALTER TABLE "User" ADD COLUMN theme_preference TEXT DEFAULT 'auto'"#,
                 [],
             )
-            .map_err(|err| SettingsServiceError::Database(format!("Failed to add theme_preference column: {}", err)))?;
+            .map_err(|err| {
+                SettingsServiceError::Database(format!(
+                    "Failed to add theme_preference column: {}",
+                    err
+                ))
+            })?;
         }
 
         Ok(())
@@ -128,7 +138,7 @@ impl SqliteSettingsService {
                 params![self.user_id],
             )
             .map_err(|err| SettingsServiceError::Database(format!("Failed to create user: {}", err)))?;
-            
+
             // Verify user was created (or already exists)
             let verify_exists: bool = conn
                 .query_row(
@@ -137,9 +147,11 @@ impl SqliteSettingsService {
                     |row| row.get(0),
                 )
                 .unwrap_or(false);
-            
+
             if !verify_exists {
-                return Err(SettingsServiceError::Database("Failed to create user: user still does not exist after insert".to_string()));
+                return Err(SettingsServiceError::Database(
+                    "Failed to create user: user still does not exist after insert".to_string(),
+                ));
             }
         }
 
@@ -154,7 +166,7 @@ impl SettingsService for SqliteSettingsService {
 
     fn get_user_settings(&self) -> SettingsResult<UserSettingsDto> {
         let conn = self.connection()?;
-        
+
         // Check if User table exists
         let table_exists: bool = conn
             .query_row(
@@ -230,7 +242,10 @@ impl SettingsService for SqliteSettingsService {
         }
     }
 
-    fn update_user_settings(&self, input: UpdateUserSettingsInput) -> SettingsResult<UserSettingsDto> {
+    fn update_user_settings(
+        &self,
+        input: UpdateUserSettingsInput,
+    ) -> SettingsResult<UserSettingsDto> {
         let conn = self.connection()?;
         self.ensure_user_exists(&conn)?;
 
@@ -249,7 +264,9 @@ impl SettingsService for SqliteSettingsService {
                 r#"UPDATE "User" SET locale = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"#,
                 params![locale, self.user_id],
             )
-            .map_err(|err| SettingsServiceError::Database(format!("Failed to update locale: {}", err)))?;
+            .map_err(|err| {
+                SettingsServiceError::Database(format!("Failed to update locale: {}", err))
+            })?;
         }
 
         if let Some(week_starts_on) = input.week_starts_on {
@@ -290,7 +307,7 @@ impl SettingsService for SqliteSettingsService {
 
     fn update_category_order(&self, input: UpdateCategoryOrderInput) -> SettingsResult<()> {
         let mut conn = self.connection()?;
-        
+
         // Validate all category IDs belong to this user
         let mut valid_count = 0;
         for category_id in &input.category_ids {
@@ -313,19 +330,23 @@ impl SettingsService for SqliteSettingsService {
         }
 
         // Update sort_order for each category
-        let tx = conn.transaction()
-            .map_err(|err| SettingsServiceError::Database(format!("Failed to start transaction: {}", err)))?;
+        let tx = conn.transaction().map_err(|err| {
+            SettingsServiceError::Database(format!("Failed to start transaction: {}", err))
+        })?;
 
         for (index, category_id) in input.category_ids.iter().enumerate() {
             tx.execute(
                 r#"UPDATE "Category" SET sort_order = ? WHERE id = ? AND user_id = ?"#,
                 params![index as i32, category_id, self.user_id],
             )
-            .map_err(|err| SettingsServiceError::Database(format!("Failed to update category order: {}", err)))?;
+            .map_err(|err| {
+                SettingsServiceError::Database(format!("Failed to update category order: {}", err))
+            })?;
         }
 
-        tx.commit()
-            .map_err(|err| SettingsServiceError::Database(format!("Failed to commit transaction: {}", err)))?;
+        tx.commit().map_err(|err| {
+            SettingsServiceError::Database(format!("Failed to commit transaction: {}", err))
+        })?;
 
         Ok(())
     }
@@ -347,7 +368,9 @@ mod tests {
     #[test]
     fn bootstrap_creates_schema_and_user() {
         let service = setup_temp_service();
-        let settings = service.get_user_settings().expect("settings should load after bootstrap");
+        let settings = service
+            .get_user_settings()
+            .expect("settings should load after bootstrap");
         assert_eq!(settings.id, "seed-user");
         assert_eq!(settings.default_currency, "USD");
         assert_eq!(settings.locale, "en-US");

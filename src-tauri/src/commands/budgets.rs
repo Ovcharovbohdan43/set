@@ -17,10 +17,7 @@ pub async fn list_budgets(state: State<'_, AppState>) -> Result<Vec<BudgetDto>, 
 }
 
 #[tauri::command]
-pub async fn get_budget(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<BudgetDto, String> {
+pub async fn get_budget(state: State<'_, AppState>, id: String) -> Result<BudgetDto, String> {
     let service = state.services().budget();
     spawn_blocking(move || service.get_budget(&id))
         .await
@@ -53,10 +50,7 @@ pub async fn update_budget(
 }
 
 #[tauri::command]
-pub async fn delete_budget(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+pub async fn delete_budget(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let service = state.services().budget();
     spawn_blocking(move || service.delete_budget(&id))
         .await
@@ -75,4 +69,3 @@ pub async fn record_snapshot(
         .map_err(|err| err.to_string())?
         .map_err(|err| err.to_string())
 }
-

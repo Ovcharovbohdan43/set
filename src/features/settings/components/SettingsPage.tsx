@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
-import { AppearanceSection } from './sections/AppearanceSection';
 import { CategoriesSection } from './sections/CategoriesSection';
 import { DataSection } from './sections/DataSection';
 import { GeneralSection } from './sections/GeneralSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
 import { SyncSection } from './sections/SyncSection';
+import { AccountsSection } from './sections/AccountsSection';
+import { NotificationsSection } from './sections/NotificationsSection';
 
 type SectionId =
   | 'general'
@@ -14,7 +15,6 @@ type SectionId =
   | 'sync'
   | 'notifications'
   | 'data'
-  | 'appearance'
   | 'personalization';
 
 interface Section {
@@ -30,8 +30,7 @@ const SECTIONS: Section[] = [
   { id: 'sync', label: 'Sync' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'data', label: 'Data' },
-  { id: 'personalization', label: 'Personalization' },
-  { id: 'appearance', label: 'Appearance' }
+  { id: 'personalization', label: 'Personalization' }
 ];
 
 export function SettingsPage() {
@@ -47,22 +46,12 @@ export function SettingsPage() {
         return <DataSection />;
       case 'personalization':
         return <PersonalizationSection />;
-      case 'appearance':
-        return <AppearanceSection />;
       case 'accounts':
-        return (
-          <div className="rounded-2xl border border-dashed border-slate-300/70 p-6 text-center text-slate-500 dark:border-slate-700/70 dark:text-slate-400">
-            Account management coming soon...
-          </div>
-        );
+        return <AccountsSection />;
       case 'sync':
         return <SyncSection />;
       case 'notifications':
-        return (
-          <div className="rounded-2xl border border-dashed border-slate-300/70 p-6 text-center text-slate-500 dark:border-slate-700/70 dark:text-slate-400">
-            Notification preferences coming soon...
-          </div>
-        );
+        return <NotificationsSection />;
       default:
         return null;
     }

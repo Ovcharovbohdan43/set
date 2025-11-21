@@ -81,4 +81,3 @@ pub async fn delete_goal(state: State<'_, AppState>, id: String) -> Result<(), S
         .map_err(|err| err.to_string())?
         .map_err(|err| err.to_string())
 }
-

@@ -170,7 +170,11 @@ impl SqliteBudgetService {
         let budget_type = match row.budget_type.as_str() {
             "envelope" => BudgetType::Envelope,
             "overall" => BudgetType::Overall,
-            _ => return Err(BudgetServiceError::Validation("Invalid budget type".to_string())),
+            _ => {
+                return Err(BudgetServiceError::Validation(
+                    "Invalid budget type".to_string(),
+                ))
+            }
         };
 
         Ok(BudgetDto {
@@ -346,7 +350,10 @@ impl BudgetService for SqliteBudgetService {
         let existing = self.fetch_budget_row(&conn, &input.id)?;
 
         let name = input.name.unwrap_or(existing.name);
-        let period = input.period.map(|p| p.as_str().to_string()).unwrap_or(existing.period);
+        let period = input
+            .period
+            .map(|p| p.as_str().to_string())
+            .unwrap_or(existing.period);
         let budget_type = input
             .budget_type
             .map(|t| t.as_str().to_string())
@@ -364,7 +371,7 @@ impl BudgetService for SqliteBudgetService {
             ));
         }
 
-        if alert_threshold < 0.0 || alert_threshold > 1.0 {
+        if !(0.0..=1.0).contains(&alert_threshold) {
             return Err(BudgetServiceError::Validation(
                 "Alert threshold must be between 0 and 1".to_string(),
             ));
@@ -407,7 +414,10 @@ impl BudgetService for SqliteBudgetService {
             .map_err(|err| BudgetServiceError::Database(err.to_string()))?;
 
         if rows_affected == 0 {
-            return Err(BudgetServiceError::NotFound(format!("Budget {} not found", id)));
+            return Err(BudgetServiceError::NotFound(format!(
+                "Budget {} not found",
+                id
+            )));
         }
 
         Ok(())
@@ -534,4 +544,3 @@ mod tests {
         assert_eq!(status, BudgetStatus::Normal);
     }
 }
-

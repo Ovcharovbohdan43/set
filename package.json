@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config=tests/playwright.config.ts",
     "sync:server": "tsx scripts/sync/server.ts",
     "format": "prettier --write .",
     "tauri": "tauri",

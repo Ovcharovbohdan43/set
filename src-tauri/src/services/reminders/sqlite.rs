@@ -7,9 +7,8 @@ use uuid::Uuid;
 use crate::services::ServiceDescriptor;
 
 use super::{
-    CreateReminderInput, ReminderChannel, ReminderDto, ReminderResult,
-    ReminderService, ReminderServiceError, ReminderStatus, SnoozeReminderInput,
-    UpdateReminderInput,
+    CreateReminderInput, ReminderChannel, ReminderDto, ReminderResult, ReminderService,
+    ReminderServiceError, ReminderStatus, SnoozeReminderInput, UpdateReminderInput,
 };
 
 const DEFAULT_USER_ID: &str = "seed-user";
@@ -73,7 +72,7 @@ impl SqliteReminderService {
             if rule == "DAILY" || rule.starts_with("FREQ=DAILY") {
                 let mut next = due;
                 while next <= now {
-                    next = next + Duration::days(1);
+                    next += Duration::days(1);
                 }
                 return Ok(Some(next.to_rfc3339()));
             }
@@ -81,7 +80,7 @@ impl SqliteReminderService {
             if rule == "WEEKLY" || rule.starts_with("FREQ=WEEKLY") {
                 let mut next = due;
                 while next <= now {
-                    next = next + Duration::days(7);
+                    next += Duration::days(7);
                 }
                 return Ok(Some(next.to_rfc3339()));
             }
@@ -90,7 +89,7 @@ impl SqliteReminderService {
                 let mut next = due;
                 while next <= now {
                     // Approximate month as 30 days
-                    next = next + Duration::days(30);
+                    next += Duration::days(30);
                 }
                 return Ok(Some(next.to_rfc3339()));
             }
@@ -161,7 +160,11 @@ impl SqliteReminderService {
             "toast" => ReminderChannel::Toast,
             "in_app" => ReminderChannel::InApp,
             "email" => ReminderChannel::Email,
-            _ => return Err(ReminderServiceError::Validation("Invalid channel".to_string())),
+            _ => {
+                return Err(ReminderServiceError::Validation(
+                    "Invalid channel".to_string(),
+                ))
+            }
         };
 
         let status = match row.status.as_str() {
@@ -169,7 +172,11 @@ impl SqliteReminderService {
             "sent" => ReminderStatus::Sent,
             "snoozed" => ReminderStatus::Snoozed,
             "dismissed" => ReminderStatus::Dismissed,
-            _ => return Err(ReminderServiceError::Validation("Invalid status".to_string())),
+            _ => {
+                return Err(ReminderServiceError::Validation(
+                    "Invalid status".to_string(),
+                ))
+            }
         };
 
         Ok(ReminderDto {
@@ -319,7 +326,8 @@ impl ReminderService for SqliteReminderService {
         let conn = self.connection()?;
         let id = Uuid::new_v4().to_string();
         let channel = input.channel.unwrap_or(ReminderChannel::Toast);
-        let next_fire_at = self.calculate_next_fire_at(&input.due_at, input.recurrence_rule.as_deref())?;
+        let next_fire_at =
+            self.calculate_next_fire_at(&input.due_at, input.recurrence_rule.as_deref())?;
 
         conn.execute(
             r#"
@@ -364,7 +372,9 @@ impl ReminderService for SqliteReminderService {
             .channel
             .map(|c| c.as_str().to_string())
             .unwrap_or(existing.channel);
-        let snooze_minutes = input.snooze_minutes.unwrap_or(existing.snooze_minutes.unwrap_or(0));
+        let snooze_minutes = input
+            .snooze_minutes
+            .unwrap_or(existing.snooze_minutes.unwrap_or(0));
         let status = input
             .status
             .map(|s| s.as_str().to_string())
@@ -413,7 +423,10 @@ impl ReminderService for SqliteReminderService {
             .map_err(|err| ReminderServiceError::Database(err.to_string()))?;
 
         if rows_affected == 0 {
-            return Err(ReminderServiceError::NotFound(format!("Reminder {} not found", id)));
+            return Err(ReminderServiceError::NotFound(format!(
+                "Reminder {} not found",
+                id
+            )));
         }
 
         Ok(())
@@ -432,7 +445,9 @@ impl ReminderService for SqliteReminderService {
         let now = Utc::now();
         let next_fire = if let Some(current_next) = reminder.next_fire_at {
             let current = DateTime::parse_from_rfc3339(&current_next)
-                .map_err(|err| ReminderServiceError::Validation(format!("Invalid next_fire_at: {}", err)))?
+                .map_err(|err| {
+                    ReminderServiceError::Validation(format!("Invalid next_fire_at: {}", err))
+                })?
                 .with_timezone(&Utc);
             (current.max(now) + Duration::minutes(input.snooze_minutes as i64)).to_rfc3339()
         } else {
@@ -566,4 +581,3 @@ impl ReminderService for SqliteReminderService {
         self.get_reminder(id)
     }
 }
-

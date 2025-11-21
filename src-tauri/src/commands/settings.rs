@@ -51,4 +51,3 @@ pub async fn update_category_order(
         .map_err(|err| err.to_string())?
         .map_err(|err| err.to_string())
 }
-

@@ -24,12 +24,15 @@ impl ReminderScheduler {
 
     pub async fn start_polling(&self) {
         let mut poll_interval = interval(Duration::from_secs(POLL_INTERVAL_SECONDS));
-        
-        info!("Reminder scheduler started, polling every {} seconds", POLL_INTERVAL_SECONDS);
+
+        info!(
+            "Reminder scheduler started, polling every {} seconds",
+            POLL_INTERVAL_SECONDS
+        );
 
         loop {
             poll_interval.tick().await;
-            
+
             if let Err(err) = self.process_due_reminders().await {
                 error!(error = %err, "Error processing due reminders");
             }
@@ -37,14 +40,20 @@ impl ReminderScheduler {
     }
 
     async fn process_due_reminders(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let due_reminders = self.reminder_service.get_due_reminders()
+        let due_reminders = self
+            .reminder_service
+            .get_due_reminders()
             .map_err(|e| format!("Failed to get due reminders: {}", e))?;
 
         if due_reminders.is_empty() {
             return Ok(());
         }
 
-        info!(count = due_reminders.len(), "Found {} due reminder(s)", due_reminders.len());
+        info!(
+            count = due_reminders.len(),
+            "Found {} due reminder(s)",
+            due_reminders.len()
+        );
 
         for reminder in due_reminders {
             if let Err(err) = self.trigger_notification(&reminder).await {
@@ -59,7 +68,10 @@ impl ReminderScheduler {
         Ok(())
     }
 
-    async fn trigger_notification(&self, reminder: &ReminderDto) -> Result<(), Box<dyn std::error::Error>> {
+    async fn trigger_notification(
+        &self,
+        reminder: &ReminderDto,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         info!(
             reminder_id = %reminder.id,
             title = %reminder.title,
@@ -68,11 +80,13 @@ impl ReminderScheduler {
         );
 
         // Emit event to frontend
-        self.app_handle.emit("notification:prepared", reminder)
+        self.app_handle
+            .emit("notification:prepared", reminder)
             .map_err(|e| format!("Failed to emit notification:prepared event: {}", e))?;
 
         // Mark reminder as sent and update last_triggered_at
-        self.reminder_service.mark_reminder_sent(&reminder.id)
+        self.reminder_service
+            .mark_reminder_sent(&reminder.id)
             .map_err(|e| format!("Failed to mark reminder as sent: {}", e))?;
 
         info!(
@@ -107,31 +121,58 @@ mod tests {
             Ok(vec![])
         }
 
-        fn get_reminder(&self, _id: &str) -> crate::services::reminders::ReminderResult<ReminderDto> {
-            Err(crate::services::reminders::ReminderServiceError::NotFound("not found".to_string()))
+        fn get_reminder(
+            &self,
+            _id: &str,
+        ) -> crate::services::reminders::ReminderResult<ReminderDto> {
+            Err(crate::services::reminders::ReminderServiceError::NotFound(
+                "not found".to_string(),
+            ))
         }
 
-        fn create_reminder(&self, _input: crate::services::reminders::CreateReminderInput) -> crate::services::reminders::ReminderResult<ReminderDto> {
-            Err(crate::services::reminders::ReminderServiceError::Internal("not implemented".to_string()))
+        fn create_reminder(
+            &self,
+            _input: crate::services::reminders::CreateReminderInput,
+        ) -> crate::services::reminders::ReminderResult<ReminderDto> {
+            Err(crate::services::reminders::ReminderServiceError::Internal(
+                "not implemented".to_string(),
+            ))
         }
 
-        fn update_reminder(&self, _input: crate::services::reminders::UpdateReminderInput) -> crate::services::reminders::ReminderResult<ReminderDto> {
-            Err(crate::services::reminders::ReminderServiceError::Internal("not implemented".to_string()))
+        fn update_reminder(
+            &self,
+            _input: crate::services::reminders::UpdateReminderInput,
+        ) -> crate::services::reminders::ReminderResult<ReminderDto> {
+            Err(crate::services::reminders::ReminderServiceError::Internal(
+                "not implemented".to_string(),
+            ))
         }
 
         fn delete_reminder(&self, _id: &str) -> crate::services::reminders::ReminderResult<()> {
-            Err(crate::services::reminders::ReminderServiceError::Internal("not implemented".to_string()))
+            Err(crate::services::reminders::ReminderServiceError::Internal(
+                "not implemented".to_string(),
+            ))
         }
 
-        fn snooze_reminder(&self, _input: crate::services::reminders::SnoozeReminderInput) -> crate::services::reminders::ReminderResult<ReminderDto> {
-            Err(crate::services::reminders::ReminderServiceError::Internal("not implemented".to_string()))
+        fn snooze_reminder(
+            &self,
+            _input: crate::services::reminders::SnoozeReminderInput,
+        ) -> crate::services::reminders::ReminderResult<ReminderDto> {
+            Err(crate::services::reminders::ReminderServiceError::Internal(
+                "not implemented".to_string(),
+            ))
         }
 
-        fn get_due_reminders(&self) -> crate::services::reminders::ReminderResult<Vec<ReminderDto>> {
+        fn get_due_reminders(
+            &self,
+        ) -> crate::services::reminders::ReminderResult<Vec<ReminderDto>> {
             Ok(self.due_reminders.clone())
         }
 
-        fn mark_reminder_sent(&self, _id: &str) -> crate::services::reminders::ReminderResult<ReminderDto> {
+        fn mark_reminder_sent(
+            &self,
+            _id: &str,
+        ) -> crate::services::reminders::ReminderResult<ReminderDto> {
             Ok(ReminderDto {
                 id: "test".to_string(),
                 user_id: "user".to_string(),

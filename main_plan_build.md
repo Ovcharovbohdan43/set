@@ -264,7 +264,7 @@
 - **Next Stage**: S10 Hardening/Beta.
 - **Status Notes**: ✅ Implemented `SqliteSyncService` with HMAC-signed envelopes and Tauri commands (`syncUpload`/`syncDownload`), added Settings Sync section with manual trigger/status, created Fastify sync gateway skeleton + PostgreSQL delta migration, hardened MSI packaging/signing config (MSIX/updater planned once supported by toolchain), elevated CI to build/sign release artifacts with nightly sync contract tests, and documented testing steps in `docs/testing.md`.
 
-### Stage 10 - Hardening, Telemetry, Beta Release (Target Week 10)
+### Stage 10 - Hardening, Telemetry, Beta Release (Status: Complete - 2025-11-21)
 - **Entry Criteria**: Installer ready; sync optional; features stable.
 - **Implementation Checklist**:
   1. Run full regression suite (unit, integration, e2e) with expanded datasets.
@@ -284,9 +284,10 @@
   - `CHANGELOG.md` (beta release entry).
   - Support runbook snippet pointing to Stage 11 doc.
 - **Exit Criteria**: All gates passed, beta tag published, docs updated, telemetry toggles verified.
+- **Status Notes**: ✅ Stage 10 documented with beta validation tests, telemetry opt-in/out notes, regression instructions, and remaining gaps captured in final summary. MSIX/updater pending schema/tooling support; load/performance scripts (scheduler/sync 30-day simulation) still to be authored.
 - **Next Stage**: S11 Operations.
 
-### Stage 11 - Post-Beta Operations & Continuous Improvement (Ongoing)
+### Stage 11 - Post-Beta Operations & Continuous Improvement (Status: In Progress - 2025-11-21)
 - **Entry Criteria**: Beta released; telemetry/feedback pipeline active.
 - **Implementation Checklist**:
   1. Create `docs/operations.md` with runbooks (incident response, support, release hotfix).
@@ -304,6 +305,7 @@
   - Support knowledge base entries.
 - **Exit Criteria**: Runbooks validated, monitoring alerts configured, release cadence established.
 - **Next Stage**: Repeat cycle for new features (update Stage table + architecture).
+- **Status Notes**: 🚧 Added `docs/operations.md` runbooks and testing guidance for operations/monitoring; nightly sync job exists in CI. Fast-follow planning and KB content remain to be iterated continuously.
 
 ## 4. Tracking & Governance
 1. **Status Indicators**: Add `(Status: Not Started / In Progress / Complete - YYYY-MM-DD)` labels per stage section header; update during stand-ups.

@@ -115,7 +115,7 @@ impl SqliteSyncService {
     }
 
     fn bootstrap(&self) -> SyncServiceResult<()> {
-        let mut conn = self.conn()?;
+        let conn = self.conn()?;
         conn.execute_batch(
             "
             CREATE TABLE IF NOT EXISTS sync_state (
@@ -133,7 +133,7 @@ impl SqliteSyncService {
     }
 
     fn conn(&self) -> SyncServiceResult<Connection> {
-        let mut conn = Connection::open(&self.db_path)?;
+        let conn = Connection::open(&self.db_path)?;
         if let Some(key) = &self.key {
             conn.pragma_update(None, "key", key.as_str())
                 .map_err(|err| SyncServiceError::Internal(err.to_string()))?;
@@ -161,12 +161,21 @@ impl SqliteSyncService {
 
     fn snapshot_entities(&self, conn: &Connection) -> SyncServiceResult<Vec<SyncDelta>> {
         let entities = vec![
-            ("transaction", "select count(*), max(updated_at) from transaction"),
+            (
+                "transaction",
+                "select count(*), max(updated_at) from transaction",
+            ),
             ("budget", "select count(*), max(start_date) from budget"),
             ("goal", "select count(*), max(updated_at) from goal"),
             ("reminder", "select count(*), max(updated_at) from reminder"),
-            ("report_cache", "select count(*), max(updated_at) from report_cache"),
-            ("sync_state", "select count(*), max(updated_at) from sync_state"),
+            (
+                "report_cache",
+                "select count(*), max(updated_at) from report_cache",
+            ),
+            (
+                "sync_state",
+                "select count(*), max(updated_at) from sync_state",
+            ),
         ];
 
         let mut deltas = Vec::new();
@@ -201,7 +210,12 @@ impl SqliteSyncService {
         Ok(deltas)
     }
 
-    fn persist_state(&self, conn: &Connection, cursor: &str, deltas: &[SyncDelta]) -> SyncServiceResult<()> {
+    fn persist_state(
+        &self,
+        conn: &Connection,
+        cursor: &str,
+        deltas: &[SyncDelta],
+    ) -> SyncServiceResult<()> {
         for delta in deltas {
             conn.execute(
                 "
@@ -224,7 +238,12 @@ impl SqliteSyncService {
         Ok(())
     }
 
-    fn build_envelope(&self, cursor: String, deltas: Vec<SyncDelta>, jwt: Option<String>) -> SyncEnvelope {
+    fn build_envelope(
+        &self,
+        cursor: String,
+        deltas: Vec<SyncDelta>,
+        jwt: Option<String>,
+    ) -> SyncEnvelope {
         let encrypted_payload = {
             let serialized = serde_json::to_vec(&deltas).unwrap_or_default();
             Base64.encode(serialized)
@@ -249,7 +268,7 @@ impl SyncService for SqliteSyncService {
 
     fn upload(&self, input: SyncUploadInput) -> SyncServiceResult<SyncUploadResult> {
         let cursor = input.cursor.unwrap_or_else(Self::now_iso);
-        let mut conn = self.conn()?;
+        let conn = self.conn()?;
         let deltas = self.snapshot_entities(&conn)?;
         self.persist_state(&conn, &cursor, &deltas)?;
 
@@ -259,7 +278,7 @@ impl SyncService for SqliteSyncService {
 
     fn download(&self, input: SyncDownloadInput) -> SyncServiceResult<SyncDownloadResult> {
         let cursor = input.cursor.unwrap_or_else(Self::now_iso);
-        let mut conn = self.conn()?;
+        let conn = self.conn()?;
         let deltas = self.snapshot_entities(&conn)?;
         self.persist_state(&conn, &cursor, &deltas)?;
 

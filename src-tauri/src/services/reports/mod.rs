@@ -109,10 +109,7 @@ pub trait ReportService: Send + Sync {
         start_date: &str,
         end_date: &str,
     ) -> ReportResult<Vec<SpendingByCategoryDto>>;
-    fn get_monthly_trend(
-        &self,
-        months: i32,
-    ) -> ReportResult<Vec<MonthlyTrendDto>>;
+    fn get_monthly_trend(&self, months: i32) -> ReportResult<Vec<MonthlyTrendDto>>;
     fn invalidate_cache(&self, key_prefix: Option<&str>) -> ReportResult<()>;
 }
 
@@ -164,18 +161,14 @@ impl SqliteReportService {
                 WHERE user_id = ? AND key = ? AND expires_at > ?
                 "#,
                 params![self.user_id, key, now],
-                |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, DateTime<Utc>>(1)?,
-                    ))
-                },
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, DateTime<Utc>>(1)?)),
             )
             .optional()?;
 
         if let Some((payload, _)) = row {
-            let value: T = serde_json::from_str(&payload)
-                .map_err(|e| ReportServiceError::Cache(format!("Failed to deserialize cache: {}", e)))?;
+            let value: T = serde_json::from_str(&payload).map_err(|e| {
+                ReportServiceError::Cache(format!("Failed to deserialize cache: {}", e))
+            })?;
             Ok(Some(value))
         } else {
             Ok(None)
@@ -234,21 +227,17 @@ impl SqliteReportService {
             "#,
         )?;
 
-        let rows = stmt.query_map(
-            params![self.user_id, start_date, end_date],
-            |row| {
-                Ok(SpendingByCategoryDto {
-                    category_id: row.get(0)?,
-                    category_name: row.get(1)?,
-                    amount_cents: row.get(2)?,
-                    percentage: 0.0, // Will calculate below
-                    transaction_count: row.get(3)?,
-                })
-            },
-        )?;
+        let rows = stmt.query_map(params![self.user_id, start_date, end_date], |row| {
+            Ok(SpendingByCategoryDto {
+                category_id: row.get(0)?,
+                category_name: row.get(1)?,
+                amount_cents: row.get(2)?,
+                percentage: 0.0, // Will calculate below
+                transaction_count: row.get(3)?,
+            })
+        })?;
 
-        let mut results: Vec<SpendingByCategoryDto> = rows
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut results: Vec<SpendingByCategoryDto> = rows.collect::<Result<Vec<_>, _>>()?;
 
         let total: i64 = results.iter().map(|r| r.amount_cents).sum();
         if total > 0 {
@@ -260,13 +249,9 @@ impl SqliteReportService {
         Ok(results)
     }
 
-    fn monthly_trend(
-        &self,
-        conn: &Connection,
-        months: i32,
-    ) -> ReportResult<Vec<MonthlyTrendDto>> {
+    fn monthly_trend(&self, conn: &Connection, months: i32) -> ReportResult<Vec<MonthlyTrendDto>> {
         let start_date = Utc::now().date_naive() - chrono::Duration::days((months * 30) as i64);
-        
+
         let mut stmt = conn.prepare(
             r#"
             SELECT 
@@ -281,47 +266,48 @@ impl SqliteReportService {
             "#,
         )?;
 
-        let rows = stmt.query_map(
-            params![self.user_id, start_date],
-            |row| {
-                let income: i64 = row.get(1)?;
-                let expense: i64 = row.get(2)?;
-                Ok(MonthlyTrendDto {
-                    month: row.get(0)?,
-                    income_cents: income,
-                    expense_cents: expense,
-                    net_cents: income - expense,
-                })
-            },
-        )?;
+        let rows = stmt.query_map(params![self.user_id, start_date], |row| {
+            let income: i64 = row.get(1)?;
+            let expense: i64 = row.get(2)?;
+            Ok(MonthlyTrendDto {
+                month: row.get(0)?,
+                income_cents: income,
+                expense_cents: expense,
+                net_cents: income - expense,
+            })
+        })?;
 
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
-    fn calculate_forecast(
-        &self,
-        conn: &Connection,
-    ) -> ReportResult<Option<Forecast>> {
+    fn calculate_forecast(&self, conn: &Connection) -> ReportResult<Option<Forecast>> {
         let trend = self.monthly_trend(conn, 3)?;
-        
+
         if trend.len() < 2 {
             return Ok(None);
         }
 
         // Simple linear regression for next month forecast
         let recent = &trend[trend.len().saturating_sub(3)..];
-        let avg_income: f64 = recent.iter().map(|t| t.income_cents as f64).sum::<f64>() / recent.len() as f64;
-        let avg_expense: f64 = recent.iter().map(|t| t.expense_cents as f64).sum::<f64>() / recent.len() as f64;
+        let avg_income: f64 =
+            recent.iter().map(|t| t.income_cents as f64).sum::<f64>() / recent.len() as f64;
+        let avg_expense: f64 =
+            recent.iter().map(|t| t.expense_cents as f64).sum::<f64>() / recent.len() as f64;
 
         // Calculate confidence based on variance
-        let income_variance: f64 = recent.iter()
+        let income_variance: f64 = recent
+            .iter()
             .map(|t| (t.income_cents as f64 - avg_income).powi(2))
-            .sum::<f64>() / recent.len() as f64;
-        let expense_variance: f64 = recent.iter()
+            .sum::<f64>()
+            / recent.len() as f64;
+        let expense_variance: f64 = recent
+            .iter()
             .map(|t| (t.expense_cents as f64 - avg_expense).powi(2))
-            .sum::<f64>() / recent.len() as f64;
-        
-        let confidence = (1.0 - (income_variance + expense_variance) / (avg_income + avg_expense + 1.0)).max(0.0).min(1.0);
+            .sum::<f64>()
+            / recent.len() as f64;
+
+        let confidence = (1.0 - (income_variance + expense_variance) / (avg_income + avg_expense + 1.0))
+            .clamp(0.0, 1.0);
 
         Ok(Some(Forecast {
             next_month_income: avg_income as i64,
@@ -366,7 +352,9 @@ impl ReportService for SqliteReportService {
             .with_day(1)
             .and_then(|d| d.checked_add_months(chrono::Months::new(1)))
             .and_then(|d| d.checked_sub_days(chrono::Days::new(1)))
-            .ok_or_else(|| ReportServiceError::Internal("Failed to calculate end date".to_string()))?
+            .ok_or_else(|| {
+                ReportServiceError::Internal("Failed to calculate end date".to_string())
+            })?
             .format("%Y-%m-%d")
             .to_string();
 
@@ -414,24 +402,21 @@ impl ReportService for SqliteReportService {
             "#,
         )?;
 
-        let budget_rows = budget_stmt.query_map(
-            params![self.user_id, month],
-            |row| {
-                let target: i64 = row.get(2)?;
-                let spent: i64 = row.get(3)?;
-                Ok(BudgetSummary {
-                    budget_id: row.get(0)?,
-                    budget_name: row.get(1)?,
-                    target_cents: target,
-                    spent_cents: spent,
-                    progress_percent: if target > 0 {
-                        (spent as f64 / target as f64) * 100.0
-                    } else {
-                        0.0
-                    },
-                })
-            },
-        )?;
+        let budget_rows = budget_stmt.query_map(params![self.user_id, month], |row| {
+            let target: i64 = row.get(2)?;
+            let spent: i64 = row.get(3)?;
+            Ok(BudgetSummary {
+                budget_id: row.get(0)?,
+                budget_name: row.get(1)?,
+                target_cents: target,
+                spent_cents: spent,
+                progress_percent: if target > 0 {
+                    (spent as f64 / target as f64) * 100.0
+                } else {
+                    0.0
+                },
+            })
+        })?;
 
         let budget_summaries: Vec<BudgetSummary> = budget_rows.collect::<Result<Vec<_>, _>>()?;
 
@@ -478,7 +463,10 @@ impl ReportService for SqliteReportService {
         end_date: &str,
     ) -> ReportResult<Vec<SpendingByCategoryDto>> {
         let conn = self.connection()?;
-        let cache_key = self.get_cache_key("spending_by_category", &format!("{}:{}", start_date, end_date));
+        let cache_key = self.get_cache_key(
+            "spending_by_category",
+            &format!("{}:{}", start_date, end_date),
+        );
 
         if let Some(cached) = self.get_cached::<Vec<SpendingByCategoryDto>>(&conn, &cache_key)? {
             return Ok(cached);
@@ -489,10 +477,7 @@ impl ReportService for SqliteReportService {
         Ok(result)
     }
 
-    fn get_monthly_trend(
-        &self,
-        months: i32,
-    ) -> ReportResult<Vec<MonthlyTrendDto>> {
+    fn get_monthly_trend(&self, months: i32) -> ReportResult<Vec<MonthlyTrendDto>> {
         let conn = self.connection()?;
         let cache_key = self.get_cache_key("monthly_trend", &months.to_string());
 
@@ -507,7 +492,7 @@ impl ReportService for SqliteReportService {
 
     fn invalidate_cache(&self, key_prefix: Option<&str>) -> ReportResult<()> {
         let conn = self.connection()?;
-        
+
         if let Some(prefix) = key_prefix {
             conn.execute(
                 r#"
@@ -539,10 +524,10 @@ mod tests {
             PathBuf::from(":memory:"),
             None,
             Some("test-user".to_string()),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         let key = service.get_cache_key("monthly_report", "2025-01");
         assert_eq!(key, "monthly_report:test-user:2025-01");
     }
 }
-

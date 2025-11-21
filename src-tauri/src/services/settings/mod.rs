@@ -41,8 +41,6 @@ pub struct UpdateCategoryOrderInput {
 pub enum SettingsServiceError {
     #[error("database error: {0}")]
     Database(String),
-    #[error("not found: {0}")]
-    NotFound(String),
     #[error("validation error: {0}")]
     Validation(String),
     #[error("internal error: {0}")]
@@ -60,7 +58,9 @@ impl From<rusqlite::Error> for SettingsServiceError {
 pub trait SettingsService: Send + Sync {
     fn descriptor(&self) -> ServiceDescriptor;
     fn get_user_settings(&self) -> SettingsResult<UserSettingsDto>;
-    fn update_user_settings(&self, input: UpdateUserSettingsInput) -> SettingsResult<UserSettingsDto>;
+    fn update_user_settings(
+        &self,
+        input: UpdateUserSettingsInput,
+    ) -> SettingsResult<UserSettingsDto>;
     fn update_category_order(&self, input: UpdateCategoryOrderInput) -> SettingsResult<()>;
 }
-
