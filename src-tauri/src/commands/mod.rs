@@ -1,6 +1,8 @@
+mod budgets;
 mod dashboard;
 mod transactions;
 
+pub use budgets::*;
 pub use dashboard::*;
 pub use transactions::*;
 

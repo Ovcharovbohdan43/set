@@ -48,7 +48,7 @@ pub fn load_or_create(service_name: &str, fallback_file: &Path) -> Result<AppSec
     }
 
     #[cfg(target_os = "windows")]
-    if let Some(secret) = read_windows_credential(service_name)? {
+    if let Ok(Some(secret)) = read_windows_credential(service_name) {
         return Ok(AppSecrets::new(secret));
     }
 
@@ -59,7 +59,9 @@ pub fn load_or_create(service_name: &str, fallback_file: &Path) -> Result<AppSec
     let generated = generate_key();
 
     #[cfg(target_os = "windows")]
-    write_windows_credential(service_name, &generated)?;
+    if write_windows_credential(service_name, &generated).is_err() {
+        tracing::warn!("Failed to write to Windows Credential Manager, using fallback file");
+    }
 
     write_secret_file(fallback_file, &generated)?;
 
@@ -145,7 +147,7 @@ fn write_windows_credential(service_name: &str, secret: &str) -> Result<(), Secr
 
     use windows::core::PWSTR;
     use windows::Win32::Security::Credentials::{
-        CredWriteW, CREDENTIALW, CRED_PERSIST_LOCAL_MACHINE, CRED_TYPE_GENERIC,
+        CredWriteW, CREDENTIALW, CRED_PERSIST_ENTERPRISE, CRED_TYPE_GENERIC,
     };
 
     let mut encoded: Vec<u16> = OsStr::new(service_name).encode_wide().collect();
@@ -158,7 +160,7 @@ fn write_windows_credential(service_name: &str, secret: &str) -> Result<(), Secr
         TargetName: PWSTR(encoded.as_mut_ptr()),
         CredentialBlobSize: blob.len() as u32,
         CredentialBlob: blob.as_mut_ptr(),
-        Persist: CRED_PERSIST_LOCAL_MACHINE,
+        Persist: CRED_PERSIST_ENTERPRISE,
         AttributeCount: 0,
         Comment: PWSTR::null(),
         TargetAlias: PWSTR::null(),

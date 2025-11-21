@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
+pub mod budgets;
 pub mod dashboard;
 pub mod transactions;
 
+pub use budgets::{
+    BudgetDto, BudgetEntryDto, BudgetResult, BudgetService, BudgetServiceError, BudgetStatus,
+    CreateBudgetInput, RecordSnapshotInput, SqliteBudgetService, UpdateBudgetInput,
+};
 pub use dashboard::{
     DashboardResult, DashboardService, DashboardServiceError, DashboardSnapshot, SqliteDashboardService,
 };
@@ -24,9 +29,7 @@ impl ServiceDescriptor {
     }
 }
 
-pub trait BudgetService: Send + Sync {
-    fn descriptor(&self) -> ServiceDescriptor;
-}
+// BudgetService trait is defined in budgets module
 
 pub trait GoalService: Send + Sync {
     fn descriptor(&self) -> ServiceDescriptor;
@@ -87,6 +90,34 @@ impl TransactionService for NoopTransactionService {
 impl BudgetService for NoopBudgetService {
     fn descriptor(&self) -> ServiceDescriptor {
         ServiceDescriptor::new("BudgetService", "noop")
+    }
+
+    fn list_budgets(&self) -> BudgetResult<Vec<BudgetDto>> {
+        not_configured_budget()
+    }
+
+    fn get_budget(&self, _: &str) -> BudgetResult<BudgetDto> {
+        not_configured_budget()
+    }
+
+    fn create_budget(&self, _: CreateBudgetInput) -> BudgetResult<BudgetDto> {
+        not_configured_budget()
+    }
+
+    fn update_budget(&self, _: UpdateBudgetInput) -> BudgetResult<BudgetDto> {
+        not_configured_budget()
+    }
+
+    fn delete_budget(&self, _: &str) -> BudgetResult<()> {
+        not_configured_budget()
+    }
+
+    fn record_snapshot(&self, _: RecordSnapshotInput) -> BudgetResult<BudgetEntryDto> {
+        not_configured_budget()
+    }
+
+    fn calculate_budget_progress(&self, _: &str) -> BudgetResult<(i64, i64, f64, BudgetStatus)> {
+        not_configured_budget()
     }
 }
 
@@ -168,7 +199,6 @@ impl ServiceRegistry {
         Arc::clone(&self.dashboard)
     }
 
-    #[allow(dead_code)]
     pub fn budget(&self) -> Arc<dyn BudgetService> {
         Arc::clone(&self.budget)
     }
@@ -216,7 +246,6 @@ impl ServiceRegistryBuilder {
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_budget<T>(mut self, service: T) -> Self
     where
         T: BudgetService + 'static,
@@ -279,5 +308,11 @@ fn not_configured<T>() -> TransactionResult<T> {
 fn not_configured_dashboard<T>() -> DashboardResult<T> {
     Err(DashboardServiceError::Internal(
         "DashboardService is not configured".to_string(),
+    ))
+}
+
+fn not_configured_budget<T>() -> BudgetResult<T> {
+    Err(BudgetServiceError::Internal(
+        "BudgetService is not configured".to_string(),
     ))
 }

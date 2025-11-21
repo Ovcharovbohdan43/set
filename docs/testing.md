@@ -44,8 +44,21 @@ cargo test
 
 All commands executed on Windows 10 (PowerShell) after installing pnpm via `npm install -g pnpm` (Corepack not available). Outputs are stored in the local terminal history for audit.
 
-## 4. Next Test Milestones
-- **Week 4**: Budget burn-rate unit tests + command integration tests (Budgets page).
+## 4. Budget Engine (Week 4, 2025-11-20)
+- **Scope**: `SqliteBudgetService`, budget CRUD commands, Budgets UI (envelope grid, progress rings, variance table, inline edits), alert notifications, seed script updates.
+- **Environment Notes**: Budgets calculate spent amounts from transactions matching category and period. Ensure test transactions exist for accurate progress calculations.
+- **Executed Commands**
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm lint` | ✅ Passed | Verified new budget components/hooks comply with ESLint + Tailwind rules. |
+| `pnpm typecheck` | ✅ Passed | Validated budget schemas, API types, and form components. |
+| `pnpm test` | ✅ Passed | Ran full Vitest suite (including `tests/unit/budgets/utils.test.ts`). |
+| `cargo fmt --check` | ✅ Passed | Ensured `SqliteBudgetService` + command modules stay formatted. |
+| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new budget service/commands. |
+| `cargo test` | ✅ Passed | Exercises Rust unit tests (`calculate_progress` logic for normal/atRisk/over statuses). |
+
+## 5. Next Test Milestones
 - **Week 5**: Goal board tests + notification assertions.
 - **Continuous**: Mirror new tests in CI by upgrading `.github/workflows/ci.yml` placeholders to real steps (e.g., `pnpm test:e2e`).
 
@@ -79,7 +92,7 @@ All commands executed on Windows 10 (PowerShell) after installing pnpm via `npm 
 | `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new dashboard service/commands. |
 | `cargo test` | ✅ Passed | Exercises Rust unit tests (`build_weekly_series` fill logic + transaction ledger tests). |
 
-## 6. Transactions Core (Week 2, 2025-11-20)
+## 7. Transactions Core (Week 2, 2025-11-20)
 - **Scope**: `SqliteTransactionService`, new Tauri commands, React Transactions page (TanStack Table + Radix Dialog), optimistic mutations, shared Zod schemas.
 - **Environment Notes**: Requires `DATABASE_URL` pointing to the SQLCipher DB and optional `PF_APP_DB_KEY`. Rust tests copy `prisma/dev.db`; ensure it exists locally (`pnpm db:seed` produces it).
 

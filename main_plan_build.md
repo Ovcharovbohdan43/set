@@ -127,7 +127,7 @@
 - **Status Notes**: ✅ Implemented `SqliteDashboardService` + `get_dashboard_snapshot`, built the Dashboard page (KPI cards, quick actions, command palette, offline indicator, weekly spend chart, account highlights), wired React Query invalidation via `transaction:changed` events, added keyboard shortcuts, documentation, and verification (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `cargo fmt`, `cargo clippy -- -D warnings`, `cargo test`).
 - **Next Stage**: S4 Budget engine.
 
-### Stage 4 - Budget Engine (Target Week 4)
+### Stage 4 - Budget Engine (Status: Complete - 2025-11-20)
 - **Entry Criteria**: Dashboard shipped; budget tables seeded.
 - **Implementation Checklist**:
   1. Implement `BudgetService` (envelopes, rollover, alerts, snapshots).
@@ -146,6 +146,7 @@
   - `src/features/budgets/README.md` (state machine, tests).
   - `CHANGELOG.md`.
 - **Exit Criteria**: Snapshot job stable, budgets page accurate, docs/tests done.
+- **Status Notes**: ✅ Implemented `SqliteBudgetService` with progress calculation and status detection (Normal/At Risk/Over), created Tauri commands for budget CRUD operations, built Budgets UI page with responsive grid layout, progress rings, and inline edit/delete, added color-coded status indicators, updated seed script with starter budgets, wrote unit tests for utils, and updated all documentation.
 - **Next Stage**: S5 Goals.
 
 ### Stage 5 - Goals & Savings (Target Week 5)

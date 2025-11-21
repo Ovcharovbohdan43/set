@@ -116,24 +116,71 @@ async function upsertCategories(userId: string) {
   }
 }
 
-async function seedBudget(userId: string) {
+async function seedBudgets(userId: string) {
   const { start, end } = getCurrentMonthRange();
-  await prisma.budget.upsert({
-    where: { id: 'budget-groceries' },
-    update: {},
-    create: {
+  const budgets = [
+    {
       id: 'budget-groceries',
-      user_id: userId,
       name: 'Groceries - Monthly',
       period: BUDGET_PERIODS.monthly,
       type: BUDGET_TYPES.envelope,
       category_id: 'cat-groceries',
       amount_cents: 60000,
-      start_date: start,
-      end_date: end,
-      rollover: true
+      rollover: true,
+      alert_threshold: 0.8
+    },
+    {
+      id: 'budget-rent',
+      name: 'Rent - Monthly',
+      period: BUDGET_PERIODS.monthly,
+      type: BUDGET_TYPES.envelope,
+      category_id: 'cat-rent',
+      amount_cents: 120000,
+      rollover: false,
+      alert_threshold: 0.9
+    },
+    {
+      id: 'budget-overall',
+      name: 'Overall Monthly Budget',
+      period: BUDGET_PERIODS.monthly,
+      type: 'overall' as const,
+      category_id: null,
+      amount_cents: 300000,
+      rollover: false,
+      alert_threshold: 0.85
     }
-  });
+  ];
+
+  for (const budget of budgets) {
+    await prisma.budget.upsert({
+      where: { id: budget.id },
+      update: {
+        user_id: userId,
+        name: budget.name,
+        period: budget.period,
+        type: budget.type,
+        category_id: budget.category_id,
+        amount_cents: budget.amount_cents,
+        start_date: start,
+        end_date: end,
+        rollover: budget.rollover,
+        alert_threshold: budget.alert_threshold
+      },
+      create: {
+        id: budget.id,
+        user_id: userId,
+        name: budget.name,
+        period: budget.period,
+        type: budget.type,
+        category_id: budget.category_id,
+        amount_cents: budget.amount_cents,
+        start_date: start,
+        end_date: end,
+        rollover: budget.rollover,
+        alert_threshold: budget.alert_threshold
+      }
+    });
+  }
 }
 
 async function seedGoal(userId: string) {
@@ -175,7 +222,7 @@ async function main() {
   const user = await upsertUser();
   await upsertAccounts(user.id);
   await upsertCategories(user.id);
-  await Promise.all([seedBudget(user.id), seedGoal(user.id)]);
+  await Promise.all([seedBudgets(user.id), seedGoal(user.id)]);
 
   await seedSampleTransaction(user.id);
 

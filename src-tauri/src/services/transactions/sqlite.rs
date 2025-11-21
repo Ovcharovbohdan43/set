@@ -37,7 +37,46 @@ impl SqliteTransactionService {
 
     fn bootstrap(&self) -> TransactionResult<()> {
         let conn = self.connection()?;
+        self.init_schema(&conn)?;
         self.recalculate_account_balances(&conn)?;
+        Ok(())
+    }
+
+    fn init_schema(&self, conn: &Connection) -> TransactionResult<()> {
+        // Check if schema already exists
+        let table_exists: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='User')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if table_exists {
+            return Ok(());
+        }
+
+        // Initialize schema
+        conn.execute_batch(include_str!("../../../../prisma/migrations/20251120193838_init/migration.sql"))
+            .map_err(|err| TransactionServiceError::Database(format!("Failed to initialize schema: {}", err)))?;
+
+        // Create default user if not exists
+        let user_exists: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM \"User\" WHERE id = ?)",
+                params![self.user_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !user_exists {
+            conn.execute(
+                "INSERT INTO \"User\" (id, default_currency, locale, week_starts_on, telemetry_opt_in, created_at, updated_at) VALUES (?, 'USD', 'en-US', 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                params![self.user_id],
+            )
+            .map_err(|err| TransactionServiceError::Database(format!("Failed to create default user: {}", err)))?;
+        }
+
         Ok(())
     }
 
