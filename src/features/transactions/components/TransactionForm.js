@@ -6,6 +6,11 @@ const TRANSACTION_TYPES = [
     { value: 'income', label: 'Income' },
     { value: 'transfer', label: 'Transfer' }
 ];
+const PRESET_CURRENCIES = [
+    { value: 'USD', label: 'USD · US Dollar' },
+    { value: 'EUR', label: 'EUR · Euro' },
+    { value: 'GBP', label: 'GBP · British Pound' }
+];
 export function TransactionFormView({ accounts, categories, defaultValues, onSubmit, onCancel, submitLabel = 'Save' }) {
     const initialAccount = useMemo(() => {
         if (defaultValues?.accountId)

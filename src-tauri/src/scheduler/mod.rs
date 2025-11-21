@@ -98,8 +98,8 @@ mod tests {
     impl ReminderService for MockReminderService {
         fn descriptor(&self) -> crate::services::ServiceDescriptor {
             crate::services::ServiceDescriptor {
-                name: "MockReminderService".to_string(),
-                version: "1.0.0".to_string(),
+                name: "MockReminderService",
+                provider: "test",
             }
         }
 
@@ -184,4 +184,3 @@ mod tests {
         assert_eq!(due[0].title, "Test Reminder");
     }
 }
-

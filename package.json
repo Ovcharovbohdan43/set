@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "sync:server": "tsx scripts/sync/server.ts",
     "format": "prettier --write .",
     "tauri": "tauri",
     "prisma:generate": "prisma generate",
@@ -39,6 +40,10 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@fastify/cors": "^10.0.1",
+    "@fastify/jwt": "^9.0.1",
+    "@fastify/postgres": "^6.0.1",
+    "@fastify/rate-limit": "^10.1.0",
     "@js-temporal/polyfill": "^0.4.4",
     "@playwright/test": "^1.48.2",
     "@tauri-apps/cli": "^2.9.4",
@@ -57,7 +62,9 @@
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.9.0",
     "jsdom": "^24.0.0",
+    "fastify": "^5.1.0",
     "pino": "^9.5.0",
+    "pg": "^8.13.1",
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "prisma": "^5.20.0",

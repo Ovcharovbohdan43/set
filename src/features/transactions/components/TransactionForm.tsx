@@ -18,6 +18,12 @@ const TRANSACTION_TYPES = [
   { value: 'transfer', label: 'Transfer' }
 ] as const;
 
+const PRESET_CURRENCIES = [
+  { value: 'USD', label: 'USD · US Dollar' },
+  { value: 'EUR', label: 'EUR · Euro' },
+  { value: 'GBP', label: 'GBP · British Pound' }
+] as const;
+
 export function TransactionFormView({
   accounts,
   categories,
@@ -141,12 +147,17 @@ export function TransactionFormView({
 
         <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
           Currency
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-300/70 bg-white px-3 py-2 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
+          <select
+            className="mt-1 w-full rounded-lg border border-slate-300/70 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
             value={form.currency}
-            maxLength={3}
-            onChange={(event) => handleChange('currency', event.target.value.toUpperCase())}
-          />
+            onChange={(event) => handleChange('currency', event.target.value)}
+          >
+            {PRESET_CURRENCIES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 

@@ -1,7 +1,7 @@
 # Personal Finance Desktop App
 
 ## Purpose
-This repository hosts the offline-first Windows desktop finance manager described in `docs/architecture.md`. Stage 3 (Dashboard & KPIs) is now complete: the app opens on a real-time financial cockpit (net worth, cash flow, budget burn, weekly spend chart, command palette, quick actions) powered by the new `DashboardService`, while the Transactions workspace from Stage 2 remains accessible via the navigation tabs.
+This repository hosts the offline-first Windows desktop finance manager described in `docs/architecture.md`. Stage 9 (Packaging & Sync) is now complete: MSIX packaging/signing is wired for CI releases, a manual sync surface ships in Settings (backed by `SqliteSyncService` + Fastify gateway skeleton), and all prior feature slices (Dashboard, Transactions, Budgets, Goals, Reminders, Reports, Settings) remain available via the navigation tabs.
 
 ## Structure
 - `docs/` – Living architecture and technical references (start with `architecture.md`, `transactions.md`, and the Dashboard updates in §7).
@@ -33,6 +33,8 @@ Consult `docs/architecture.md` for detailed descriptions of every slice plus acc
    - `pnpm lint`, `pnpm typecheck`: Quality gates
    - `pnpm prisma migrate deploy --preview-feature`: Validates Prisma migrations (requires `DATABASE_URL`)
    - `pnpm prisma generate`: Regenerates the Prisma client for scripts/automation
+   - `pnpm sync:server`: Run the Fastify sync mock (JWT protected, optional Postgres)
+   - `pnpm tauri build --target x86_64-pc-windows-msvc --bundles msix`: Produce signed installer (CI injects signing secrets)
 
 > Note: Scripts currently reference placeholder configs. Update them as soon as actual implementations are committed.
 

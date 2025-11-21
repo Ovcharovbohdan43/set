@@ -2,13 +2,7 @@ import { useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
-import {
-  decryptEncryptedJson,
-  importTransactionsFromFile,
-  parseAndValidateCsv,
-  parseAndValidateJson,
-  readImportFile
-} from '../../api';
+import { parseAndValidateCsv, parseAndValidateJson } from '../../api';
 import { importTransactions } from '@/features/transactions/api';
 
 interface ImportError {
@@ -17,7 +11,6 @@ interface ImportError {
 }
 
 export function DataSection() {
-  const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{
     processed: number;
@@ -98,9 +91,9 @@ export function DataSection() {
           setImportErrors(validationResult.errors);
 
           // Invalidate queries to refresh data
-          queryClient.invalidateQueries({ queryKey: ['transactions'] });
-          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-          queryClient.invalidateQueries({ queryKey: ['reports'] });
+          await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+          await queryClient.invalidateQueries({ queryKey: ['reports'] });
         } catch (error) {
           throw new Error(
             `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`

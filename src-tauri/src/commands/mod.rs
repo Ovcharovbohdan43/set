@@ -6,6 +6,7 @@ mod import;
 mod reminders;
 mod reports;
 mod settings;
+mod sync;
 mod transactions;
 
 pub use budgets::*;
@@ -16,6 +17,7 @@ pub use import::*;
 pub use reminders::*;
 pub use reports::*;
 pub use settings::*;
+pub use sync::*;
 pub use transactions::*;
 
 use serde::Serialize;

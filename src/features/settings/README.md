@@ -10,7 +10,7 @@ The Settings feature provides a comprehensive settings interface with multiple s
 - **Appearance**: Additional appearance settings (legacy section, kept for compatibility)
 - **Categories**: Category reordering with drag-and-drop (planned)
 - **Accounts**: Account management (planned)
-- **Sync**: Cloud sync preferences (planned for Stage 9)
+- **Sync**: Manual sync trigger, status pill, signature preview (powered by `useSyncStatus`)
 - **Notifications**: Notification preferences (planned)
 - **Data**: Export/import functionality with validation and quarantine
 
@@ -64,11 +64,13 @@ await updateMutation.mutateAsync({
 ### Unit Tests
 - Settings reducers and validation logic
 - Theme switcher logic with prefers-color-scheme
+- Sync envelope summarization helpers (`deriveSyncStatus`)
 
 ### Integration Tests
 - Settings persistence to database
 - Theme preference application on mount
 - Category reorder persistence
+- Sync commands invoke `syncUpload`/`syncDownload` and surface status in UI
 
 ### Component Tests
 - Settings page navigation
@@ -79,11 +81,11 @@ await updateMutation.mutateAsync({
 - Change locale and currency -> verify budgets/transactions respect formatting
 - Switch theme -> verify CSS tokens update
 - Reorder categories -> verify persistence
+- Trigger sync -> verify status pill updates and signature appears
 
 ## Limitations
 - Drag-and-drop for categories requires @dnd-kit/core integration
 - Import validation and quarantine are planned for future enhancement
-- Cloud sync settings are deferred to Stage 9
 - Account management UI is planned for future enhancement
 
 ## Modules Impacted
@@ -95,11 +97,12 @@ await updateMutation.mutateAsync({
 - `prisma/schema.prisma`: User model with theme_preference field
 
 ## Version
-1.1.0
+1.2.0
 
 ## Last Updated
-2025-01-20
+2025-11-21
 
 ## Changelog
-- [2025-01-20] – Added: Initial Settings feature implementation with General, Appearance, Categories, and Data sections. Theme switcher with light/dark/auto support and system preference detection. Telemetry toggle. Settings service on Rust backend with Tauri commands.
-- [2025-01-20] – Fixed: Theme switching issues - created ThemeProvider for app-level theme initialization, preventing theme from switching to dark when opening Appearance settings tab. Added Personalization section with explicit theme toggle buttons. Improved error handling in GeneralSection with retry logic and better visual feedback. Added retry logic with exponential backoff to useUserSettingsQuery hook.
+- [2025-11-21] - Added: Sync section with manual trigger and status pill powered by `useSyncStatus`, exposing HMAC-signed envelopes for packaging & sync verification.
+- [2025-01-20] - Added: Initial Settings feature implementation with General, Appearance, Categories, and Data sections. Theme switcher with light/dark/auto support and system preference detection. Telemetry toggle. Settings service on Rust backend with Tauri commands.
+- [2025-01-20] - Fixed: Theme switching issues - created ThemeProvider for app-level theme initialization, preventing theme from switching to dark when opening Appearance settings tab. Added Personalization section with explicit theme toggle buttons. Improved error handling in GeneralSection with retry logic and better visual feedback. Added retry logic with exponential backoff to useUserSettingsQuery hook.

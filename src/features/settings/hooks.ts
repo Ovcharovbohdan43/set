@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getUserSettings, updateCategoryOrder, updateUserSettings } from './api';
-import type { UpdateCategoryOrder, UpdateUserSettings } from './schema';
+
 
 export function useUserSettingsQuery() {
   return useQuery({
@@ -18,8 +18,8 @@ export function useUpdateUserSettingsMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateUserSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userSettings'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['userSettings'] });
     }
   });
 }
@@ -28,8 +28,8 @@ export function useUpdateCategoryOrderMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateCategoryOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
     }
   });
 }

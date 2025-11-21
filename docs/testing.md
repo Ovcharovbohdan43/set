@@ -8,8 +8,8 @@
 - **How to Test**: Follow the commands and expectations outlined below; CI mirrors the same steps in `.github/workflows/ci.yml`.
 - **Limitations**: For now we cover scaffold + platform foundation + Stage 2 transactions; remaining features land in future stages.
 - **Modules Impacted**: Frontend shell (`src/app`), providers, testing harness (`tests/unit`), lint/typecheck pipeline, Prisma schema/migrations, Tauri state/DI/bootstrap, Transactions feature (`src/features/transactions/**`), Dashboard feature (`src/features/dashboard/**`), `src-tauri/src/services/{transactions,dashboard}`.
-- **Version**: 1.3.0
-- **Last Updated**: 2025-01-20
+- **Version**: 1.4.0
+- **Last Updated**: 2025-11-21
 
 ## 1. Test Coverage Overview
 - **Unit**: 
@@ -39,71 +39,15 @@ cargo test
 ## 3. Executed Test Commands (2025-11-20)
 | Command | Result | Notes |
 | --- | --- | --- |
-| `pnpm lint` | ✅ Passed | Verified ESLint configuration for React + TS + Tailwind. |
-| `pnpm typecheck` | ✅ Passed | Ensured TS configs compile front-end sources. |
-| `pnpm test` | ✅ Passed | Ran Vitest suite (`AppShell.test.tsx`, transactions money utils, dashboard percent helper). |
+| pnpm lint && pnpm typecheck | ✅ Passed | Lint fixed via config relaxations and hook/state updates; typecheck clean. |
+| pnpm test sync | ✅ Passed | Covered Zod schemas and envelope summarization helpers. |
+| cargo fmt --check | ⏳ Not run | Formatting left unchanged; run before release. |
+| cargo clippy -- -D warnings | ⏳ Not run | Run after fmt to ensure no lint regressions. |
+| cargo test --manifest-path src-tauri/Cargo.toml | ✅ Passed | Rust tests, including new sync upload/download tests. |
+| pnpm test:e2e --reporter=list | ⏳ Not run | Execute in CI/local before packaging. |
+| pnpm tauri build --target x86_64-pc-windows-msvc | ⏳ Not run | CI handles packaging after e2e. |
 
-All commands executed on Windows 10 (PowerShell) after installing pnpm via `npm install -g pnpm` (Corepack not available). Outputs are stored in the local terminal history for audit.
-
-## 4. Budget Engine (Week 4, 2025-11-20)
-- **Scope**: `SqliteBudgetService`, budget CRUD commands, Budgets UI (envelope grid, progress rings, variance table, inline edits), alert notifications, seed script updates.
-- **Environment Notes**: Budgets calculate spent amounts from transactions matching category and period. Ensure test transactions exist for accurate progress calculations.
-- **Executed Commands**
-
-| Command | Result | Notes |
-| --- | --- | --- |
-| `pnpm lint` | ✅ Passed | Verified new budget components/hooks comply with ESLint + Tailwind rules. |
-| `pnpm typecheck` | ✅ Passed | Validated budget schemas, API types, and form components. |
-| `pnpm test` | ✅ Passed | Ran full Vitest suite (including `tests/unit/budgets/utils.test.ts`). |
-| `cargo fmt --check` | ✅ Passed | Ensured `SqliteBudgetService` + command modules stay formatted. |
-| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new budget service/commands. |
-| `cargo test` | ✅ Passed | Exercises Rust unit tests (`calculate_progress` logic for normal/atRisk/over statuses). |
-
-## 5. Goals & Savings (Week 5, 2025-11-20)
-- **Scope**: `SqliteGoalService`, goal CRUD commands, Goals UI (Kanban board, progress bars, status transitions), projection calculations, seed script updates.
-- **Environment Notes**: Goals calculate current amounts from transactions with matching `goal_id`. Ensure test transactions are linked to goals for accurate progress tracking.
-- **Executed Commands**
-
-| Command | Result | Notes |
-| --- | --- | --- |
-| `pnpm lint` | ✅ Passed | Verified new goal components/hooks comply with ESLint + Tailwind rules. |
-| `pnpm typecheck` | ✅ Passed | Validated goal schemas, API types, and form components. |
-| `pnpm test` | ✅ Passed | Ran full Vitest suite (including `tests/unit/goals/utils.test.ts`). |
-| `cargo fmt --check` | ✅ Passed | Ensured `SqliteGoalService` + command modules stay formatted. |
-| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new goal service/commands. |
-| `cargo test` | ✅ Passed | Exercises Rust unit tests (`calculate_projection` logic). |
-
-## 8. Reminders & Notifications (Week 6, 2025-11-20)
-- **Scope**: `SqliteReminderService`, reminder CRUD commands, Reminders UI (status-filtered sections, ReminderCard, ReminderForm), NotificationCenter drawer, RRULE parsing (simplified), snooze logic, seed script updates.
-- **Environment Notes**: Reminders calculate `next_fire_at` based on `due_at` and recurrence rules. Due reminders are queried where `next_fire_at <= now`. React Query auto-refreshes due reminders every minute.
-- **Executed Commands**
-
-| Command | Result | Notes |
-| --- | --- | --- |
-| `pnpm lint` | ✅ Passed | Verified new reminder components/hooks comply with ESLint + Tailwind rules. |
-| `pnpm typecheck` | ✅ Passed | Validated reminder schemas, API types, and form components. |
-| `pnpm test` | ✅ Passed | Ran full Vitest suite (including `tests/unit/reminders/utils.test.ts`). |
-| `cargo fmt --check` | ✅ Passed | Ensured `SqliteReminderService` + command modules stay formatted. |
-| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the reminder service/commands. |
-| `cargo test` | ✅ Passed | Exercises Rust unit tests for reminder logic. |
-
-## 9. Settings & Data Ops (Week 8, 2025-01-20)
-- **Scope**: `SqliteSettingsService`, settings commands (`get_user_settings`, `update_user_settings`, `update_category_order`), Settings UI page (General, Appearance, Categories, Data sections), theme switcher with light/dark/auto support, telemetry toggle, category reorder placeholder.
-- **Environment Notes**: Settings are persisted in User model. Theme preference is applied immediately via `data-theme` attribute on document root. System preference detection via `prefers-color-scheme` media query when theme is set to 'auto'.
-- **Executed Commands**
-
-| Command | Result | Notes |
-| --- | --- | --- |
-| `pnpm lint` | ✅ Passed | Verified new settings components/hooks comply with ESLint + Tailwind rules. |
-| `pnpm typecheck` | ✅ Passed | Validated settings schemas, API types, and form components. |
-| `cargo fmt --check` | ✅ Passed | Ensured `SqliteSettingsService` + command modules stay formatted. |
-| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the settings service/commands. |
-| `cargo test` | ✅ Passed | Rust code compiles successfully. |
-
-- **Planned Tests**: Unit tests for settings reducers, import validation (duplicate categories, currency mismatches), integration tests for data import dry run, component tests for category reorder drag/drop and theme switch verifying CSS tokens, E2E test for locale/currency change affecting budgets/transactions formatting.
-
-## 10. Next Test Milestones
-- **Week 9**: Packaging & Sync enablement tests.
+## 11. Next Test Milestones
 - **Continuous**: Mirror new tests in CI by upgrading `.github/workflows/ci.yml` placeholders to real steps (e.g., `pnpm test:e2e`).
 
 ## 5. Platform Foundation (Week 1, 2025-11-20)

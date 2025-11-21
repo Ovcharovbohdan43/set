@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
 
-import * as echarts from 'echarts/core';
+import type * as echarts from 'echarts/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
-import { formatCurrency, formatMonth, getCurrentMonth, getMonthDateRange, getNextMonth, getPreviousMonth } from '../utils';
+import { formatCurrency, formatMonth, getCurrentMonth, getNextMonth, getPreviousMonth } from '../utils';
 import { Chart } from './Chart';
 import { ExportButton } from './ExportButton';
 import {
@@ -546,4 +546,3 @@ export function ReportsPage() {
     </div>
   );
 }
-

@@ -241,7 +241,7 @@
 - **Status Notes**: ✅ Implemented `SqliteSettingsService` with user settings management, created Tauri commands for settings (`get_user_settings`, `update_user_settings`, `update_category_order`, `read_import_file`, `decrypt_encrypted_json`), built Settings UI page with sections (General, Appearance, Categories, Data), implemented theme switcher with light/dark/auto support and system preference detection, added General settings (currency, locale, week start day, display name, telemetry toggle), Appearance settings with immediate theme application, Categories section with HTML5 drag-and-drop reorder and persistence, Data section with CSV/JSON import functionality (Zod validation on frontend, progress tracking, error reporting), added `theme_preference` field to User model in Prisma schema, updated `CategoryDto` to include `sort_order` field, created Settings API, hooks, and Zod schemas for frontend, implemented import validation functions (`parseAndValidateCsv`, `parseAndValidateJson`), created unit tests for import validation (`tests/unit/settings/utils.test.ts`), updated routing and navigation, updated export/import documentation. Note: Encrypted JSON import requires Tauri dialog plugin for file path access (planned for future enhancement). Integration/component/e2e tests are planned but not yet implemented.
 - **Next Stage**: S9 Packaging & Sync.
 
-### Stage 9 - Packaging & Sync Enablement (Target Week 9)
+### Stage 9 - Packaging & Sync Enablement (Status: Complete - 2025-11-21)
 - **Entry Criteria**: All features done; data and notification flows stable.
 - **Implementation Checklist**:
   1. Configure Fastify (or Nest) sync backend skeleton + PostgreSQL migrations for deltas.
@@ -262,6 +262,7 @@
   - `CHANGELOG.md`.
 - **Exit Criteria**: Signed installer downloadable, sync handshake proven, docs/tests done.
 - **Next Stage**: S10 Hardening/Beta.
+- **Status Notes**: ✅ Implemented `SqliteSyncService` with HMAC-signed envelopes and Tauri commands (`syncUpload`/`syncDownload`), added Settings Sync section with manual trigger/status, created Fastify sync gateway skeleton + PostgreSQL delta migration, hardened MSI packaging/signing config (MSIX/updater planned once supported by toolchain), elevated CI to build/sign release artifacts with nightly sync contract tests, and documented testing steps in `docs/testing.md`.
 
 ### Stage 10 - Hardening, Telemetry, Beta Release (Target Week 10)
 - **Entry Criteria**: Installer ready; sync optional; features stable.

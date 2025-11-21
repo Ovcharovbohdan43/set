@@ -259,6 +259,59 @@ async function seedSampleTransaction(userId: string) {
   });
 }
 
+async function seedReminders(userId: string) {
+  const now = new Date();
+  const reminders = [
+    {
+      id: 'reminder-rent',
+      title: 'Pay Rent',
+      description: 'Monthly rent payment',
+      due_at: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+      recurrence_rule: 'RRULE:FREQ=MONTHLY;INTERVAL=1',
+      channel: 'toast',
+      status: 'scheduled',
+      amount_cents: 120000
+    },
+    {
+      id: 'reminder-card',
+      title: 'Credit Card',
+      description: 'Pay credit card minimum',
+      due_at: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+      recurrence_rule: 'RRULE:FREQ=MONTHLY;INTERVAL=1',
+      channel: 'toast',
+      status: 'scheduled',
+      amount_cents: 25000
+    }
+  ];
+
+  for (const reminder of reminders) {
+    await prisma.reminder.upsert({
+      where: { id: reminder.id },
+      update: {
+        user_id: userId,
+        title: reminder.title,
+        description: reminder.description,
+        due_at: reminder.due_at,
+        recurrence_rule: reminder.recurrence_rule,
+        channel: reminder.channel,
+        status: reminder.status,
+        amount_cents: reminder.amount_cents
+      },
+      create: {
+        id: reminder.id,
+        user_id: userId,
+        title: reminder.title,
+        description: reminder.description,
+        due_at: reminder.due_at,
+        recurrence_rule: reminder.recurrence_rule,
+        channel: reminder.channel,
+        status: reminder.status,
+        amount_cents: reminder.amount_cents
+      }
+    });
+  }
+}
+
 async function main() {
   const user = await upsertUser();
   await upsertAccounts(user.id);

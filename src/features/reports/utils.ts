@@ -133,7 +133,6 @@ export function getOtherCategory(
   categories: CategorySpending[],
   limit: number = 10
 ): CategorySpending | null {
-  const topCategories = getTopCategories(categories, limit);
   const otherCategories = categories.slice(limit);
 
   if (otherCategories.length === 0) {
@@ -151,4 +150,3 @@ export function getOtherCategory(
     percentage: otherPercentage
   };
 }
-

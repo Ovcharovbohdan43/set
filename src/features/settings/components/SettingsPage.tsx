@@ -5,6 +5,7 @@ import { CategoriesSection } from './sections/CategoriesSection';
 import { DataSection } from './sections/DataSection';
 import { GeneralSection } from './sections/GeneralSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
+import { SyncSection } from './sections/SyncSection';
 
 type SectionId =
   | 'general'
@@ -55,11 +56,7 @@ export function SettingsPage() {
           </div>
         );
       case 'sync':
-        return (
-          <div className="rounded-2xl border border-dashed border-slate-300/70 p-6 text-center text-slate-500 dark:border-slate-700/70 dark:text-slate-400">
-            Sync settings coming in Stage 9...
-          </div>
-        );
+        return <SyncSection />;
       case 'notifications':
         return (
           <div className="rounded-2xl border border-dashed border-slate-300/70 p-6 text-center text-slate-500 dark:border-slate-700/70 dark:text-slate-400">

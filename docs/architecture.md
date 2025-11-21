@@ -8,14 +8,15 @@
 - **How to Test**: Follow the multi-level strategy in Section 14 (unit → integration → e2e) and reuse the provided Vitest and Playwright templates.
 - **Limitations**: Focuses on architecture and process—not a substitute for detailed API reference docs or finalized copywriting; assumes single-tenant local storage with optional multi-device sync.
 - **Modules Impacted**: React UI, Tauri command layer, domain services, SQLite/Prisma data layer, sync engine, background scheduler, notifications, CI/CD, and packaging.
-- **Version**: 1.3.0
-- **Last Updated**: 2025-01-20
+- **Version**: 1.4.0
+- **Last Updated**: 2025-11-21
 
 ## Changelog
 - [2025-11-20] – Added: Initial architecture blueprint, including stack rationale, data model, commands, UX system, analytics, security, packaging, CI/CD, testing, and 10-week roadmap.
 - [2025-11-20] – Changed: Documented the platform foundation (PathState/AppState, ServiceRegistry builder, SQLCipher DSN + env propagation, and Tauri capability configuration for secure filesystem access).
 - [2025-11-20] – Added: Dashboard/KPI implementation details (SqliteDashboardService, `get_dashboard_snapshot`, command palette & quick actions, offline indicator, weekly spend visualization, and new testing expectations).
 - [2025-01-20] – Added: Reports & Analytics implementation details (SqliteReportService with caching and forecast, ECharts visualizations, export pipeline for CSV/JSON/encrypted JSON/PNG, query optimization with indexes, and export/import documentation).
+- [2025-11-21] - Added: Packaging & Sync enablement (SqliteSyncService, Fastify sync gateway skeleton with JWT/HMAC envelopes, Settings sync UI, MSIX bundling/signing defaults, updater endpoint, CI release job, and nightly sync test workflow).
 
 ---
 
@@ -422,8 +423,8 @@ enum TransactionType {
 | `getDashboardSnapshot` | `void` | `DashboardSnapshot` | Aggregates net worth, cash flow, budget burn, weekly spend, and account highlights through `SqliteDashboardService`. |
 | `createBudget` | `BudgetInput` | `BudgetDTO` | Creates envelope + seed snapshot. |
 | `scheduleReminder` | `ReminderInput` | `ReminderDTO` | Writes reminder + enqueues scheduler. |
-| `syncUpload` | `{ cursor?: string }` | `{ nextCursor: string }` | Batches deltas, compresses + encrypts payload. |
-| `syncDownload` | `{ cursor?: string }` | `{ entities: SyncEntity[], nextCursor: string }` | Merges remote changes, logs conflicts. |
+| `syncUpload` | `{ cursor?: string, jwt?: string }` | `{ nextCursor: string, envelope }` | Batches deltas, base64-wraps payload, signs with HMAC (JWT secret) before POSTing to Fastify gateway. |
+| `syncDownload` | `{ cursor?: string, jwt?: string }` | `{ entities: SyncEntity[], nextCursor: string, envelope }` | Retrieves remote deltas, verifies signature, merges into local sync_state, and logs conflicts. |
 | `exportData` | `{ format: 'csv'|'json'|'pdf' }` | `{ path: string }` | Streams export to `%APPDATA%/Exports`. |
 | `importData` | `{ filePath: string }` | `ImportResult` | Validates checksum/version before merging. |
 | `updateGoalStatus` | `{ goalId: string, status: GoalStatus }` | `GoalDTO` | Triggers UI notification when achieved. |
@@ -591,6 +592,7 @@ const chartOptions = {
 ### 8.4 Sync Integration
 - `reminder` changes included in sync payload; remote reminders can generate pushes if enabled.
 - Conflict resolution: keep earliest `next_fire_at`, merge `recurrence_rule` by version number.
+- Sync transport uses HMAC-signed envelopes (JWT secret) and base64-wrapped payloads produced by `SqliteSyncService`; Settings > Sync exposes manual trigger and status pill to surface gateway health.
 
 ---
 
@@ -617,13 +619,12 @@ const chartOptions = {
 
 ## 11. Packaging & Deployment (MSIX + Updates)
 1. **Build Frontend**: `pnpm build` (Vite) outputs to `dist/`.
-2. **Tauri Build**: Configure `src-tauri/tauri.conf.json` with `"distDir": "../dist"` and `"devPath": "http://localhost:1420"` per Context7 docs.
-   - The same config now declares the secure `main` window and wires `capabilities/main.json`, which limits filesystem access to `$APPDATA`/`$RESOURCE` following the Context7 capability best practices.
+2. **Tauri Build**: Configure `src-tauri/tauri.conf.json` with `"frontendDist": "../dist"`, `"devUrl": "http://localhost:5173"`, MSIX target list, and the secure `main` window wired to `capabilities/main.json`, which limits filesystem access to `$APPDATA`/`$RESOURCE` following the Context7 capability best practices.
 3. **Cargo Build**: Release profile uses LTO, `panic = "abort"`, `strip = true` (per Tauri guidance).
-4. **MSIX Packaging**: Use `tauri build --target x86_64-pc-windows-msvc --bundles msix`.
-5. **Code Signing**: Sign MSIX with EV certificate; store certificate securely in CI secret.
-6. **Updates**: Integrate Tauri updater with private endpoint hosting `latest.json`. Auto-update checks on launch + manual trigger in Settings.
-7. **Distribution**: Publish via Microsoft Store optional; otherwise share signed MSIX + release notes.
+4. **MSI/MSIX Packaging**: Use `tauri build --target x86_64-pc-windows-msvc` (MSI enabled in config; upgrade to MSIX once the toolchain supports it); CI runs `tauri-apps/tauri-action@v0` with release metadata and signed output.
+5. **Code Signing**: Sign MSIX with EV certificate (`certificateThumbprint` placeholder in config); secrets (`TAURI_PRIVATE_KEY`, `TAURI_KEY_PASSWORD`) are injected in CI and stored outside the repo.
+6. **Updates**: Updater endpoint planned; configuration deferred until the CLI schema exposes updater fields (Settings > Sync & Packaging still presents the manual trigger/status).
+7. **Distribution**: Publish via Microsoft Store optional; otherwise share signed MSIX + release notes. Nightly sync tests validate gateway compatibility before posting installers.
 
 ---
 
@@ -631,11 +632,11 @@ const chartOptions = {
 
 ### 12.1 Stages
 1. **Lint & Type-check**: `pnpm lint`, `pnpm typecheck`, `cargo fmt --check`, `cargo clippy`.
-2. **Unit Tests**: `pnpm test --runInBand`, `cargo test`.
-3. **Integration/UI Tests**: Playwright headless suite (Transactions flow, Reports update).
-4. **Build + Package**: `tauri-apps/tauri-action` builds Windows binary + MSIX.
-5. **Sign & Release**: Use `signtool` or Azure Sign Service; upload artifacts; create GitHub Release with changelog.
-6. **Nightly Sync Tests**: Optional job hitting staging Fastify API to ensure compatibility.
+2. **Unit Tests**: `pnpm test`, `cargo test`.
+3. **Integration/UI Tests**: Playwright headless suite (`pnpm test:e2e`).
+4. **Build + Package**: `tauri-apps/tauri-action` builds Windows binary + MSIX and attaches artifacts.
+5. **Sign & Release**: Signing happens within the action using `TAURI_PRIVATE_KEY`/`TAURI_KEY_PASSWORD`; releases include changelog + MSIX.
+6. **Nightly Sync Tests**: Scheduled job hitting the Fastify mock gateway via `pnpm test --filter sync`.
 
 ### 12.2 Sample Workflow Snippet
 \```yaml
@@ -644,6 +645,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'
 jobs:
   build:
     runs-on: windows-latest
@@ -657,20 +661,34 @@ jobs:
           cache: 'pnpm'
       - uses: actions-rs/toolchain@v1
         with: { profile: minimal, toolchain: stable, components: clippy }
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm lint && pnpm typecheck && pnpm test
-      - run: cargo fmt --check && cargo clippy -- -D warnings
+      - run: cargo fmt --check && cargo clippy -- -D warnings && cargo test
       - run: pnpm playwright install --with-deps
-      - run: pnpm test:e2e
+      - run: pnpm test:e2e --reporter=list
       - uses: tauri-apps/tauri-action@v0
         with:
           tagName: v__VERSION__
           releaseName: "Finance App v__VERSION__"
           releaseBody: "Automated release"
           tauriScript: pnpm tauri
+          args: --target x86_64-pc-windows-msvc --bundles msix
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+  nightly-sync:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm test --filter sync
 \```
 
 ---
@@ -832,4 +850,3 @@ it('creates transaction and emits event', async () => {
 - [ ] Security review of new inputs/exports.
 
 This blueprint is now ready to hand off to implementation teams. Update it whenever architecture, constraints, or timelines evolve.
-

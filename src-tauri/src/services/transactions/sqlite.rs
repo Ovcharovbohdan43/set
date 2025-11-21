@@ -53,6 +53,8 @@ impl SqliteTransactionService {
             .unwrap_or(false);
 
         if table_exists {
+            // Ensure baseline data exists for new features
+            self.ensure_seed_data(conn)?;
             return Ok(());
         }
 
@@ -76,6 +78,9 @@ impl SqliteTransactionService {
             )
             .map_err(|err| TransactionServiceError::Database(format!("Failed to create default user: {}", err)))?;
         }
+
+        // Seed default account/category data for first-run UX
+        self.ensure_seed_data(&conn)?;
 
         Ok(())
     }
@@ -128,6 +133,60 @@ impl SqliteTransactionService {
                 params![balance, account_id],
             )
             .map_err(|err| TransactionServiceError::Database(err.to_string()))?;
+        }
+
+        Ok(())
+    }
+
+    fn ensure_seed_data(&self, conn: &Connection) -> TransactionResult<()> {
+        // Seed a default checking account if none exist
+        let account_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM \"Account\" WHERE user_id = ?",
+                params![self.user_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        if account_count == 0 {
+            conn.execute(
+                r#"INSERT INTO "Account" (id, user_id, name, type, currency, balance_cents, created_at, updated_at)
+                   VALUES ('acct-default', ?, 'Checking', 'checking', 'USD', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"#,
+                params![self.user_id],
+            )
+            .map_err(|err| TransactionServiceError::Database(format!("Failed to seed default account: {}", err)))?;
+        }
+
+        // Seed baseline categories (idempotent; insert if missing)
+        let categories = vec![
+            ("cat-income", "💼 Income", "income", 0),
+            ("cat-food", "🥕 Food & Groceries", "expense", 1),
+            ("cat-transport", "🚌 Transport", "expense", 2),
+            ("cat-fuel", "⛽ Fuel / Gasoline / Diesel", "expense", 3),
+            ("cat-rent", "🏠 Rent / Mortgage", "expense", 4),
+            ("cat-utilities", "🔌 Utilities", "expense", 5),
+            ("cat-home", "🛠️ Home & Household", "expense", 6),
+            ("cat-entertainment", "🎬 Entertainment", "expense", 7),
+            ("cat-clothing", "👕 Clothing & Apparel", "expense", 8),
+            ("cat-health", "🩺 Health", "expense", 9),
+            ("cat-kids", "🧸 Kids & Baby", "expense", 10),
+        ];
+
+        for (id, name, kind, order) in categories {
+            conn.execute(
+                r#"INSERT OR IGNORE INTO "Category" (id, user_id, name, type, sort_order, created_at)
+                   VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"#,
+                params![id, self.user_id, name, kind, order],
+            )
+            .map_err(|err| TransactionServiceError::Database(format!("Failed to seed category {name}: {err}")))?;
+
+            // Keep names/types/sort_order in sync if the row already existed under the same ID
+            conn.execute(
+                r#"UPDATE "Category" SET name = ?, type = ?, sort_order = ?
+                   WHERE id = ? AND user_id = ?"#,
+                params![name, kind, order, id, self.user_id],
+            )
+            .map_err(|err| TransactionServiceError::Database(format!("Failed to update category {name}: {err}")))?;
         }
 
         Ok(())
@@ -537,6 +596,8 @@ impl TransactionService for SqliteTransactionService {
     ) -> TransactionResult<TransactionDto> {
         let payload = TransactionPayload::from_create(input)?;
         let mut conn = self.connection()?;
+        // Ensure seed data exists before writes in case DB was created without upfront seeding
+        self.ensure_seed_data(&conn)?;
         let tx = conn
             .transaction()
             .map_err(|err| TransactionServiceError::Database(err.to_string()))?;

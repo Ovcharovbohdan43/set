@@ -5,9 +5,7 @@ import { useUpdateUserSettingsMutation, useUserSettingsQuery } from '../../hooks
 const CURRENCIES = [
   { value: 'USD', label: 'US Dollar (USD)' },
   { value: 'EUR', label: 'Euro (EUR)' },
-  { value: 'GBP', label: 'British Pound (GBP)' },
-  { value: 'JPY', label: 'Japanese Yen (JPY)' },
-  { value: 'RUB', label: 'Russian Ruble (RUB)' }
+  { value: 'GBP', label: 'British Pound (GBP)' }
 ];
 
 const LOCALES = [
@@ -32,6 +30,16 @@ export function GeneralSection() {
   const [localWeekStartsOn, setLocalWeekStartsOn] = useState(settings?.weekStartsOn ?? 1);
   const [localDisplayName, setLocalDisplayName] = useState(settings?.displayName ?? '');
   const [localTelemetryOptIn, setLocalTelemetryOptIn] = useState(settings?.telemetryOptIn ?? false);
+
+  // Update local state when settings change
+  useEffect(() => {
+    if (!settings) return;
+    setLocalCurrency(settings.defaultCurrency);
+    setLocalLocale(settings.locale);
+    setLocalWeekStartsOn(settings.weekStartsOn);
+    setLocalDisplayName(settings.displayName ?? '');
+    setLocalTelemetryOptIn(settings.telemetryOptIn);
+  }, [settings]);
 
   if (isLoading) {
     return (
@@ -79,15 +87,6 @@ export function GeneralSection() {
       </div>
     );
   }
-
-  // Update local state when settings change
-  useEffect(() => {
-    setLocalCurrency(settings.defaultCurrency);
-    setLocalLocale(settings.locale);
-    setLocalWeekStartsOn(settings.weekStartsOn);
-    setLocalDisplayName(settings.displayName ?? '');
-    setLocalTelemetryOptIn(settings.telemetryOptIn);
-  }, [settings]);
 
   const handleSave = async () => {
     try {

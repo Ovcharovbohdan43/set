@@ -6,6 +6,7 @@ pub mod goals;
 pub mod reminders;
 pub mod reports;
 pub mod settings;
+pub mod sync;
 pub mod transactions;
 
 pub use budgets::{
@@ -32,6 +33,11 @@ pub use settings::{
     SettingsService, SettingsServiceError, SettingsResult, SqliteSettingsService,
     UpdateCategoryOrderInput, UpdateUserSettingsInput, UserSettingsDto,
 };
+pub use sync::{
+    SyncConflict, SyncDelta, SyncDownloadInput, SyncDownloadResult, SyncEnvelope,
+    SyncService, SyncServiceError, SyncServiceResult, SyncUploadInput, SyncUploadResult,
+    SqliteSyncService,
+};
 pub use transactions::{
     AccountDto, CategoryDto, CreateTransactionInput, ImportTransactionsInput,
     SqliteTransactionService, TransactionDto, TransactionQuery, TransactionResult,
@@ -53,10 +59,6 @@ impl ServiceDescriptor {
 // BudgetService trait is defined in budgets module
 // GoalService trait is defined in goals module
 // ReminderService trait is defined in reminders module
-
-pub trait SyncService: Send + Sync {
-    fn descriptor(&self) -> ServiceDescriptor;
-}
 
 struct NoopTransactionService;
 struct NoopDashboardService;
@@ -272,6 +274,18 @@ impl SyncService for NoopSyncService {
     fn descriptor(&self) -> ServiceDescriptor {
         ServiceDescriptor::new("SyncService", "noop")
     }
+
+    fn upload(&self, _input: SyncUploadInput) -> SyncServiceResult<SyncUploadResult> {
+        Err(SyncServiceError::Unavailable(
+            "SyncService is not configured".to_string(),
+        ))
+    }
+
+    fn download(&self, _input: SyncDownloadInput) -> SyncServiceResult<SyncDownloadResult> {
+        Err(SyncServiceError::Unavailable(
+            "SyncService is not configured".to_string(),
+        ))
+    }
 }
 
 pub struct ServiceRegistry {
@@ -350,7 +364,6 @@ impl ServiceRegistry {
         Arc::clone(&self.settings)
     }
 
-    #[allow(dead_code)]
     pub fn sync(&self) -> Arc<dyn SyncService> {
         Arc::clone(&self.sync)
     }
