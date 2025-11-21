@@ -63,6 +63,10 @@ impl PathState {
         &self.logs_dir
     }
 
+    pub fn exports_dir(&self) -> &Path {
+        &self.exports_dir
+    }
+
     pub fn secrets_file(&self) -> &Path {
         &self.secrets_file
     }

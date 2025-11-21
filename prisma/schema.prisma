@@ -92,6 +92,8 @@ model Transaction {
 
   @@index([user_id, occurred_on])
   @@index([category_id, occurred_on])
+  @@index([user_id, type, occurred_on])
+  @@index([type, occurred_on])
 }
 
 model Budget {
@@ -198,5 +200,7 @@ model ReportCache {
   created_at DateTime @default(now())
 
   @@unique([user_id, key])
+  @@index([user_id, expires_at])
+  @@index([expires_at])
 }
 

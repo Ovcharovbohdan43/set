@@ -2,19 +2,22 @@
 
 mod commands;
 mod logging;
+mod scheduler;
 mod secrets;
 mod services;
 mod state;
 
 use std::{env, io};
 
-use services::{ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteGoalService, SqliteTransactionService};
+use services::{ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteGoalService, SqliteReminderService, SqliteReportService, SqliteTransactionService};
 use state::PathState;
 use tauri::Manager;
+use scheduler::ReminderScheduler;
 
 #[allow(clippy::needless_borrow)]
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let app_handle = app.handle();
             let paths = PathState::initialize(&app_handle)?;
@@ -59,11 +62,35 @@ fn main() {
             )
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
+            let reminder_service = SqliteReminderService::new(
+                paths.db_path().to_path_buf(),
+                Some(secrets.sqlcipher_key().to_string()),
+                None,
+            )
+            .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
+
+            // Create a second instance for scheduler (lightweight, only stores path and key)
+            let reminder_service_for_scheduler = SqliteReminderService::new(
+                paths.db_path().to_path_buf(),
+                Some(secrets.sqlcipher_key().to_string()),
+                None,
+            )
+            .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
+
+            let report_service = SqliteReportService::new(
+                paths.db_path().to_path_buf(),
+                Some(secrets.sqlcipher_key().to_string()),
+                None,
+            )
+            .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
+
             let services = ServiceRegistry::builder()
                 .with_transaction(transaction_service)
                 .with_dashboard(dashboard_service)
                 .with_budget(budget_service)
                 .with_goal(goal_service)
+                .with_reminder(reminder_service)
+                .with_report(report_service)
                 .build();
             let app_state = state::AppState::new(paths, secrets, services, database_url);
             app.manage(app_state);
@@ -75,6 +102,14 @@ fn main() {
                 .unwrap_or_else(|| app.package_info().name.clone());
 
             tracing::info!(app = %app_name, "Tauri shell initialized");
+
+            // Start reminder scheduler
+            let app_handle_clone = app.handle().clone();
+            let reminder_service_arc = std::sync::Arc::new(reminder_service_for_scheduler);
+            let scheduler = ReminderScheduler::new(reminder_service_arc, app_handle_clone);
+            tauri::async_runtime::spawn(async move {
+                scheduler.start_polling().await;
+            });
 
             Ok(())
         })
@@ -100,7 +135,23 @@ fn main() {
             commands::update_goal,
             commands::update_goal_status,
             commands::add_contribution,
-            commands::delete_goal
+            commands::delete_goal,
+            commands::list_reminders,
+            commands::get_reminder,
+            commands::create_reminder,
+            commands::update_reminder,
+            commands::delete_reminder,
+            commands::snooze_reminder,
+            commands::get_due_reminders,
+            commands::mark_reminder_sent,
+            commands::get_monthly_report,
+            commands::get_spending_by_category,
+            commands::get_monthly_trend,
+            commands::invalidate_report_cache,
+            commands::export_report_csv,
+            commands::export_report_json,
+            commands::export_report_encrypted_json,
+            commands::export_chart_png
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

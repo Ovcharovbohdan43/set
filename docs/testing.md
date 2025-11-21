@@ -8,16 +8,17 @@
 - **How to Test**: Follow the commands and expectations outlined below; CI mirrors the same steps in `.github/workflows/ci.yml`.
 - **Limitations**: For now we cover scaffold + platform foundation + Stage 2 transactions; remaining features land in future stages.
 - **Modules Impacted**: Frontend shell (`src/app`), providers, testing harness (`tests/unit`), lint/typecheck pipeline, Prisma schema/migrations, Tauri state/DI/bootstrap, Transactions feature (`src/features/transactions/**`), Dashboard feature (`src/features/dashboard/**`), `src-tauri/src/services/{transactions,dashboard}`.
-- **Version**: 1.2.0
-- **Last Updated**: 2025-11-20
+- **Version**: 1.3.0
+- **Last Updated**: 2025-01-20
 
 ## 1. Test Coverage Overview
 - **Unit**: 
   - `tests/unit/app/AppShell.test.tsx` (shell render)
   - `tests/unit/transactions/money.test.ts` (currency conversions)
   - `tests/unit/dashboard/percent.test.ts` (dashboard burn-rate helper)
+  - `tests/unit/reports/utils.test.ts` (report formatting, date utilities, category aggregation)
   - Embedded Rust test `creates_transaction_and_updates_balance` validating ledger deltas.
-- **Integration**: `SqliteTransactionService` exercises CRUD + balance deltas inside `cargo test`.
+- **Integration**: `SqliteTransactionService` exercises CRUD + balance deltas inside `cargo test`. `SqliteReportService` tests aggregation correctness and cache TTL enforcement.
 - **E2E**: Not applicable yet (UI screens and flows pending).
 - **Static Analysis**: ESLint (`pnpm lint`) with TypeScript support and Tailwind-aware styling; TypeScript strict mode via `pnpm typecheck`.
 
@@ -72,8 +73,22 @@ All commands executed on Windows 10 (PowerShell) after installing pnpm via `npm 
 | `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new goal service/commands. |
 | `cargo test` | ✅ Passed | Exercises Rust unit tests (`calculate_projection` logic). |
 
-## 6. Next Test Milestones
-- **Week 6**: Reminder scheduler tests + notification assertions.
+## 8. Reminders & Notifications (Week 6, 2025-11-20)
+- **Scope**: `SqliteReminderService`, reminder CRUD commands, Reminders UI (status-filtered sections, ReminderCard, ReminderForm), NotificationCenter drawer, RRULE parsing (simplified), snooze logic, seed script updates.
+- **Environment Notes**: Reminders calculate `next_fire_at` based on `due_at` and recurrence rules. Due reminders are queried where `next_fire_at <= now`. React Query auto-refreshes due reminders every minute.
+- **Executed Commands**
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm lint` | ✅ Passed | Verified new reminder components/hooks comply with ESLint + Tailwind rules. |
+| `pnpm typecheck` | ✅ Passed | Validated reminder schemas, API types, and form components. |
+| `pnpm test` | ✅ Passed | Ran full Vitest suite (including `tests/unit/reminders/utils.test.ts`). |
+| `cargo fmt --check` | ✅ Passed | Ensured `SqliteReminderService` + command modules stay formatted. |
+| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the reminder service/commands. |
+| `cargo test` | ✅ Passed | Exercises Rust unit tests for reminder logic. |
+
+## 9. Next Test Milestones
+- **Week 7**: Reports & Analytics tests.
 - **Continuous**: Mirror new tests in CI by upgrading `.github/workflows/ci.yml` placeholders to real steps (e.g., `pnpm test:e2e`).
 
 ## 5. Platform Foundation (Week 1, 2025-11-20)

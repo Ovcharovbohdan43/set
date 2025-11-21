@@ -3,6 +3,8 @@ use std::sync::Arc;
 pub mod budgets;
 pub mod dashboard;
 pub mod goals;
+pub mod reminders;
+pub mod reports;
 pub mod transactions;
 
 pub use budgets::{
@@ -15,6 +17,15 @@ pub use dashboard::{
 pub use goals::{
     AddContributionInput, CreateGoalInput, GoalDto, GoalResult, GoalService, GoalServiceError,
     SqliteGoalService, UpdateGoalInput, UpdateGoalStatusInput,
+};
+pub use reminders::{
+    CreateReminderInput, ReminderDto, ReminderResult,
+    ReminderService, ReminderServiceError, SqliteReminderService,
+    SnoozeReminderInput, UpdateReminderInput,
+};
+pub use reports::{
+    MonthlyReportDto, MonthlyTrendDto, ReportResult, ReportService, ReportServiceError,
+    SpendingByCategoryDto, SqliteReportService,
 };
 pub use transactions::{
     AccountDto, CategoryDto, CreateTransactionInput, ImportTransactionsInput,
@@ -36,10 +47,7 @@ impl ServiceDescriptor {
 
 // BudgetService trait is defined in budgets module
 // GoalService trait is defined in goals module
-
-pub trait ReminderService: Send + Sync {
-    fn descriptor(&self) -> ServiceDescriptor;
-}
+// ReminderService trait is defined in reminders module
 
 pub trait SyncService: Send + Sync {
     fn descriptor(&self) -> ServiceDescriptor;
@@ -50,6 +58,7 @@ struct NoopDashboardService;
 struct NoopBudgetService;
 struct NoopGoalService;
 struct NoopReminderService;
+struct NoopReportService;
 struct NoopSyncService;
 
 impl TransactionService for NoopTransactionService {
@@ -175,6 +184,64 @@ impl ReminderService for NoopReminderService {
     fn descriptor(&self) -> ServiceDescriptor {
         ServiceDescriptor::new("ReminderService", "noop")
     }
+
+    fn list_reminders(&self) -> ReminderResult<Vec<ReminderDto>> {
+        not_configured_reminder()
+    }
+
+    fn get_reminder(&self, _: &str) -> ReminderResult<ReminderDto> {
+        not_configured_reminder()
+    }
+
+    fn create_reminder(&self, _: CreateReminderInput) -> ReminderResult<ReminderDto> {
+        not_configured_reminder()
+    }
+
+    fn update_reminder(&self, _: UpdateReminderInput) -> ReminderResult<ReminderDto> {
+        not_configured_reminder()
+    }
+
+    fn delete_reminder(&self, _: &str) -> ReminderResult<()> {
+        not_configured_reminder()
+    }
+
+    fn snooze_reminder(&self, _: SnoozeReminderInput) -> ReminderResult<ReminderDto> {
+        not_configured_reminder()
+    }
+
+    fn get_due_reminders(&self) -> ReminderResult<Vec<ReminderDto>> {
+        not_configured_reminder()
+    }
+
+    fn mark_reminder_sent(&self, _: &str) -> ReminderResult<ReminderDto> {
+        not_configured_reminder()
+    }
+}
+
+impl ReportService for NoopReportService {
+    fn descriptor(&self) -> ServiceDescriptor {
+        ServiceDescriptor::new("ReportService", "noop")
+    }
+
+    fn get_monthly_report(&self, _: &str) -> ReportResult<MonthlyReportDto> {
+        not_configured_report()
+    }
+
+    fn get_spending_by_category(
+        &self,
+        _: &str,
+        _: &str,
+    ) -> ReportResult<Vec<SpendingByCategoryDto>> {
+        not_configured_report()
+    }
+
+    fn get_monthly_trend(&self, _: i32) -> ReportResult<Vec<MonthlyTrendDto>> {
+        not_configured_report()
+    }
+
+    fn invalidate_cache(&self, _: Option<&str>) -> ReportResult<()> {
+        not_configured_report()
+    }
 }
 
 impl SyncService for NoopSyncService {
@@ -189,6 +256,7 @@ pub struct ServiceRegistry {
     budget: Arc<dyn BudgetService>,
     goal: Arc<dyn GoalService>,
     reminder: Arc<dyn ReminderService>,
+    report: Arc<dyn ReportService>,
     sync: Arc<dyn SyncService>,
 }
 
@@ -206,6 +274,7 @@ impl ServiceRegistry {
             budget: Arc::new(NoopBudgetService),
             goal: Arc::new(NoopGoalService),
             reminder: Arc::new(NoopReminderService),
+            report: Arc::new(NoopReportService),
             sync: Arc::new(NoopSyncService),
         }
     }
@@ -221,6 +290,7 @@ impl ServiceRegistry {
             self.budget.descriptor(),
             self.goal.descriptor(),
             self.reminder.descriptor(),
+            self.report.descriptor(),
             self.sync.descriptor(),
         ]
     }
@@ -241,9 +311,12 @@ impl ServiceRegistry {
         Arc::clone(&self.goal)
     }
 
-    #[allow(dead_code)]
     pub fn reminder(&self) -> Arc<dyn ReminderService> {
         Arc::clone(&self.reminder)
+    }
+
+    pub fn report(&self) -> Arc<dyn ReportService> {
+        Arc::clone(&self.report)
     }
 
     #[allow(dead_code)]
@@ -259,6 +332,7 @@ pub struct ServiceRegistryBuilder {
     budget: Option<Arc<dyn BudgetService>>,
     goal: Option<Arc<dyn GoalService>>,
     reminder: Option<Arc<dyn ReminderService>>,
+    report: Option<Arc<dyn ReportService>>,
     sync: Option<Arc<dyn SyncService>>,
 }
 
@@ -295,12 +369,19 @@ impl ServiceRegistryBuilder {
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_reminder<T>(mut self, service: T) -> Self
     where
         T: ReminderService + 'static,
     {
         self.reminder = Some(Arc::new(service));
+        self
+    }
+
+    pub fn with_report<T>(mut self, service: T) -> Self
+    where
+        T: ReportService + 'static,
+    {
+        self.report = Some(Arc::new(service));
         self
     }
 
@@ -326,6 +407,7 @@ impl ServiceRegistryBuilder {
             reminder: self
                 .reminder
                 .unwrap_or_else(|| Arc::new(NoopReminderService)),
+            report: self.report.unwrap_or_else(|| Arc::new(NoopReportService)),
             sync: self.sync.unwrap_or_else(|| Arc::new(NoopSyncService)),
         }
     }
@@ -352,5 +434,17 @@ fn not_configured_budget<T>() -> BudgetResult<T> {
 fn not_configured_goal<T>() -> GoalResult<T> {
     Err(GoalServiceError::Internal(
         "GoalService is not configured".to_string(),
+    ))
+}
+
+fn not_configured_reminder<T>() -> ReminderResult<T> {
+    Err(ReminderServiceError::Internal(
+        "ReminderService is not configured".to_string(),
+    ))
+}
+
+fn not_configured_report<T>() -> ReportResult<T> {
+    Err(ReportServiceError::Internal(
+        "ReportService is not configured".to_string(),
     ))
 }

@@ -1,0 +1,122 @@
+import type { CategorySpending } from './schema';
+
+/**
+ * Format currency amount from cents to display string
+ */
+export function formatCurrency(cents: number, currency: string = 'USD'): string {
+  const amount = cents / 100;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency
+  }).format(amount);
+}
+
+/**
+ * Format percentage for display
+ */
+export function formatPercent(value: number, decimals: number = 1): string {
+  return `${value.toFixed(decimals)}%`;
+}
+
+/**
+ * Get current month in YYYY-MM format
+ */
+export function getCurrentMonth(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Get previous month in YYYY-MM format
+ */
+export function getPreviousMonth(month: string): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  const date = new Date(year, monthNum - 1, 1);
+  date.setMonth(date.getMonth() - 1);
+  const prevYear = date.getFullYear();
+  const prevMonth = String(date.getMonth() + 1).padStart(2, '0');
+  return `${prevYear}-${prevMonth}`;
+}
+
+/**
+ * Get next month in YYYY-MM format
+ */
+export function getNextMonth(month: string): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  const date = new Date(year, monthNum - 1, 1);
+  date.setMonth(date.getMonth() + 1);
+  const nextYear = date.getFullYear();
+  const nextMonth = String(date.getMonth() + 1).padStart(2, '0');
+  return `${nextYear}-${nextMonth}`;
+}
+
+/**
+ * Format month string for display (e.g., "2025-01" -> "January 2025")
+ */
+export function formatMonth(month: string): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  const date = new Date(year, monthNum - 1, 1);
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/**
+ * Get date range for a month (start and end dates)
+ */
+export function getMonthDateRange(month: string): { startDate: string; endDate: string } {
+  const [year, monthNum] = month.split('-').map(Number);
+  const startDate = new Date(year, monthNum - 1, 1);
+  const endDate = new Date(year, monthNum, 0); // Last day of the month
+
+  const formatDate = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  return {
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate)
+  };
+}
+
+/**
+ * Get top N categories by spending
+ */
+export function getTopCategories(
+  categories: CategorySpending[],
+  limit: number = 10
+): CategorySpending[] {
+  return [...categories]
+    .sort((a, b) => b.amountCents - a.amountCents)
+    .slice(0, limit);
+}
+
+/**
+ * Get "Other" category aggregate for categories beyond limit
+ */
+export function getOtherCategory(
+  categories: CategorySpending[],
+  limit: number = 10
+): CategorySpending | null {
+  const topCategories = getTopCategories(categories, limit);
+  const otherCategories = categories.slice(limit);
+
+  if (otherCategories.length === 0) {
+    return null;
+  }
+
+  const otherAmount = otherCategories.reduce((sum, cat) => sum + cat.amountCents, 0);
+  const totalAmount = categories.reduce((sum, cat) => sum + cat.amountCents, 0);
+  const otherPercentage = totalAmount > 0 ? (otherAmount / totalAmount) * 100 : 0;
+
+  return {
+    categoryId: null,
+    categoryName: 'Other',
+    amountCents: otherAmount,
+    percentage: otherPercentage
+  };
+}
+

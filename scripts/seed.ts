@@ -263,7 +263,7 @@ async function main() {
   const user = await upsertUser();
   await upsertAccounts(user.id);
   await upsertCategories(user.id);
-  await Promise.all([seedBudgets(user.id), seedGoals(user.id)]);
+  await Promise.all([seedBudgets(user.id), seedGoals(user.id), seedReminders(user.id)]);
 
   await seedSampleTransaction(user.id);
 

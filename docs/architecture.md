@@ -8,13 +8,14 @@
 - **How to Test**: Follow the multi-level strategy in Section 14 (unit → integration → e2e) and reuse the provided Vitest and Playwright templates.
 - **Limitations**: Focuses on architecture and process—not a substitute for detailed API reference docs or finalized copywriting; assumes single-tenant local storage with optional multi-device sync.
 - **Modules Impacted**: React UI, Tauri command layer, domain services, SQLite/Prisma data layer, sync engine, background scheduler, notifications, CI/CD, and packaging.
-- **Version**: 1.2.0
-- **Last Updated**: 2025-11-20
+- **Version**: 1.3.0
+- **Last Updated**: 2025-01-20
 
 ## Changelog
 - [2025-11-20] – Added: Initial architecture blueprint, including stack rationale, data model, commands, UX system, analytics, security, packaging, CI/CD, testing, and 10-week roadmap.
 - [2025-11-20] – Changed: Documented the platform foundation (PathState/AppState, ServiceRegistry builder, SQLCipher DSN + env propagation, and Tauri capability configuration for secure filesystem access).
 - [2025-11-20] – Added: Dashboard/KPI implementation details (SqliteDashboardService, `get_dashboard_snapshot`, command palette & quick actions, offline indicator, weekly spend visualization, and new testing expectations).
+- [2025-01-20] – Added: Reports & Analytics implementation details (SqliteReportService with caching and forecast, ECharts visualizations, export pipeline for CSV/JSON/encrypted JSON/PNG, query optimization with indexes, and export/import documentation).
 
 ---
 
@@ -92,8 +93,8 @@ Notification System      Cloud REST / GraphQL API (JWT, encrypted payloads)
 - `DashboardService`: Aggregate KPIs (net worth, cash flow, budget burn, weekly spending) with <50 ms SQL queries, hydrate account highlights, and surface the data via `get_dashboard_snapshot`. Stage 3 ships the `SqliteDashboardService`, which derives deltas from transaction history, sums active budgets, and fills 7-day spend series even when no transactions exist on a given day.
 - `BudgetService`: Manage envelope/period budgets, track actual vs target, compute burn rate for widgets. The Stage 4 implementation (`SqliteBudgetService`) calculates spent amounts from transactions matching budget category and period, computes progress percentage and status (Normal/At Risk/Over) based on alert thresholds, and supports rollover configuration. Budgets are displayed in a responsive grid with circular progress rings and color-coded status indicators.
 - `GoalService`: Manage savings targets, compute projections, trigger milestone notifications. The Stage 5 implementation (`SqliteGoalService`) calculates current amounts from transactions linked via `goal_id`, computes progress percentages and projected completion dates based on target dates, automatically transitions goals to "Achieved" status when targets are reached, and supports status management (Active/Paused/Achieved/Abandoned) with priority-based sorting. Goals are displayed in a Kanban board UI with progress bars and status indicators.
-- `ReportService`: Materialize analytics views, cache aggregated rows, produce chart-ready DTOs.
-- `ReminderService`: Manage RRULE definitions, non-linked reminders (e.g., pay credit card), and send instructions to scheduler.
+- `ReportService`: Materialize analytics views, cache aggregated rows, produce chart-ready DTOs. The Stage 7 implementation (`SqliteReportService`) provides monthly reports with spending by category, income vs expense analysis, budget summaries, and forecast calculations using simple linear regression. Reports are cached for 30 minutes to improve performance. The service supports export in CSV, JSON, encrypted JSON, and PNG formats. Query optimization includes indexes on transaction type/date combinations and report cache expiration.
+- `ReminderService`: Manage RRULE definitions, non-linked reminders (e.g., pay credit card), and send instructions to scheduler. The Stage 6 implementation (`SqliteReminderService`) calculates `next_fire_at` based on `due_at` and simplified recurrence rules (DAILY, WEEKLY, MONTHLY), supports snooze functionality with configurable duration, logs all actions to `ReminderLog` for audit trail, and provides queries for due reminders. The frontend includes a Reminders page with status-filtered sections, a NotificationCenter drawer accessible via `Ctrl+Shift+N`, and auto-refreshing due reminders query.
 - `SyncService`: Compose delta payloads, handle conflict resolution, decrypt/encrypt remote data.
 
 ### 3.4 Database & Repository Layer
