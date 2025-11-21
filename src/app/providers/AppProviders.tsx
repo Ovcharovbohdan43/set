@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
+
+import { useAppStore } from '@/store';
 
 interface Props {
   children: ReactNode;
@@ -12,6 +14,28 @@ interface Props {
 export function AppProviders({ children }: Props) {
   const queryClient = useMemo(() => new QueryClient(), []);
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <OfflineBridge />
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+function OfflineBridge() {
+  const setOffline = useAppStore((state) => state.setOffline);
+
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, [setOffline]);
+
+  return null;
 }
 

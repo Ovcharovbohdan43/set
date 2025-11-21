@@ -8,7 +8,7 @@ mod state;
 
 use std::{env, io};
 
-use services::{ServiceRegistry, SqliteTransactionService};
+use services::{ServiceRegistry, SqliteDashboardService, SqliteTransactionService};
 use state::PathState;
 use tauri::Manager;
 
@@ -38,8 +38,16 @@ fn main() {
             )
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
+            let dashboard_service = SqliteDashboardService::new(
+                paths.db_path().to_path_buf(),
+                Some(secrets.sqlcipher_key().to_string()),
+                None,
+            )
+            .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
+
             let services = ServiceRegistry::builder()
                 .with_transaction(transaction_service)
+                .with_dashboard(dashboard_service)
                 .build();
             let app_state = state::AppState::new(paths, secrets, services, database_url);
             app.manage(app_state);
@@ -62,7 +70,8 @@ fn main() {
             commands::create_transaction,
             commands::update_transaction,
             commands::delete_transaction,
-            commands::import_transactions
+            commands::import_transactions,
+            commands::get_dashboard_snapshot
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

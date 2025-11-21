@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { HashRouter } from 'react-router-dom';
+
 import App from './app/App';
 import { AppProviders } from './app/providers';
 import './styles/global.css';
@@ -12,9 +14,11 @@ if (!rootEl) {
 
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <AppProviders>
-      <App />
-    </AppProviders>
+    <HashRouter>
+      <AppProviders>
+        <App />
+      </AppProviders>
+    </HashRouter>
   </React.StrictMode>
 );
 

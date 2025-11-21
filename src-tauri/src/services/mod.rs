@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
+pub mod dashboard;
 pub mod transactions;
 
+pub use dashboard::{
+    DashboardResult, DashboardService, DashboardServiceError, DashboardSnapshot, SqliteDashboardService,
+};
 pub use transactions::{
     AccountDto, CategoryDto, CreateTransactionInput, ImportTransactionsInput,
     SqliteTransactionService, TransactionDto, TransactionQuery, TransactionResult,
@@ -37,6 +41,7 @@ pub trait SyncService: Send + Sync {
 }
 
 struct NoopTransactionService;
+struct NoopDashboardService;
 struct NoopBudgetService;
 struct NoopGoalService;
 struct NoopReminderService;
@@ -85,6 +90,16 @@ impl BudgetService for NoopBudgetService {
     }
 }
 
+impl DashboardService for NoopDashboardService {
+    fn descriptor(&self) -> ServiceDescriptor {
+        ServiceDescriptor::new("DashboardService", "noop")
+    }
+
+    fn snapshot(&self) -> DashboardResult<DashboardSnapshot> {
+        not_configured_dashboard()
+    }
+}
+
 impl GoalService for NoopGoalService {
     fn descriptor(&self) -> ServiceDescriptor {
         ServiceDescriptor::new("GoalService", "noop")
@@ -105,6 +120,7 @@ impl SyncService for NoopSyncService {
 
 pub struct ServiceRegistry {
     transaction: Arc<dyn TransactionService>,
+    dashboard: Arc<dyn DashboardService>,
     budget: Arc<dyn BudgetService>,
     goal: Arc<dyn GoalService>,
     reminder: Arc<dyn ReminderService>,
@@ -121,6 +137,7 @@ impl ServiceRegistry {
     pub fn new() -> Self {
         Self {
             transaction: Arc::new(NoopTransactionService),
+            dashboard: Arc::new(NoopDashboardService),
             budget: Arc::new(NoopBudgetService),
             goal: Arc::new(NoopGoalService),
             reminder: Arc::new(NoopReminderService),
@@ -135,6 +152,7 @@ impl ServiceRegistry {
     pub fn descriptors(&self) -> Vec<ServiceDescriptor> {
         vec![
             self.transaction.descriptor(),
+            self.dashboard.descriptor(),
             self.budget.descriptor(),
             self.goal.descriptor(),
             self.reminder.descriptor(),
@@ -144,6 +162,10 @@ impl ServiceRegistry {
 
     pub fn transaction(&self) -> Arc<dyn TransactionService> {
         Arc::clone(&self.transaction)
+    }
+
+    pub fn dashboard(&self) -> Arc<dyn DashboardService> {
+        Arc::clone(&self.dashboard)
     }
 
     #[allow(dead_code)]
@@ -170,6 +192,7 @@ impl ServiceRegistry {
 #[derive(Default)]
 pub struct ServiceRegistryBuilder {
     transaction: Option<Arc<dyn TransactionService>>,
+    dashboard: Option<Arc<dyn DashboardService>>,
     budget: Option<Arc<dyn BudgetService>>,
     goal: Option<Arc<dyn GoalService>>,
     reminder: Option<Arc<dyn ReminderService>>,
@@ -182,6 +205,14 @@ impl ServiceRegistryBuilder {
         T: TransactionService + 'static,
     {
         self.transaction = Some(Arc::new(service));
+        self
+    }
+
+    pub fn with_dashboard<T>(mut self, service: T) -> Self
+    where
+        T: DashboardService + 'static,
+    {
+        self.dashboard = Some(Arc::new(service));
         self
     }
 
@@ -226,6 +257,9 @@ impl ServiceRegistryBuilder {
             transaction: self
                 .transaction
                 .unwrap_or_else(|| Arc::new(NoopTransactionService)),
+            dashboard: self
+                .dashboard
+                .unwrap_or_else(|| Arc::new(NoopDashboardService)),
             budget: self.budget.unwrap_or_else(|| Arc::new(NoopBudgetService)),
             goal: self.goal.unwrap_or_else(|| Arc::new(NoopGoalService)),
             reminder: self
@@ -239,5 +273,11 @@ impl ServiceRegistryBuilder {
 fn not_configured<T>() -> TransactionResult<T> {
     Err(TransactionServiceError::Internal(
         "TransactionService is not configured".to_string(),
+    ))
+}
+
+fn not_configured_dashboard<T>() -> DashboardResult<T> {
+    Err(DashboardServiceError::Internal(
+        "DashboardService is not configured".to_string(),
     ))
 }

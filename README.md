@@ -1,11 +1,11 @@
 # Personal Finance Desktop App
 
 ## Purpose
-This repository hosts the offline-first Windows desktop finance manager described in `docs/architecture.md`. Stage 2 (Accounts & Transactions) is now complete: the app boots into a full transactions cockpit (TanStack Table + Radix Dialog) backed by the new `SqliteTransactionService`, optimistic CRUD flows, shared Zod contracts, and updated documentation/testing assets.
+This repository hosts the offline-first Windows desktop finance manager described in `docs/architecture.md`. Stage 3 (Dashboard & KPIs) is now complete: the app opens on a real-time financial cockpit (net worth, cash flow, budget burn, weekly spend chart, command palette, quick actions) powered by the new `DashboardService`, while the Transactions workspace from Stage 2 remains accessible via the navigation tabs.
 
 ## Structure
-- `docs/` – Living architecture and technical references (start with `architecture.md` and `transactions.md`).
-- `src/` – React + Vite frontend organized by feature folders (`src/features/transactions` delivers Stage 2 UI/logic).
+- `docs/` – Living architecture and technical references (start with `architecture.md`, `transactions.md`, and the Dashboard updates in §7).
+- `src/` – React + Vite frontend organized by feature folders (`src/features/dashboard` + `src/features/transactions` deliver the current UI/logic).
 - `src-tauri/` – Tauri backend (Rust + optional TypeScript services) wired for commands, background work, and notifications.
   - `src-tauri/icons/` – Placeholder ICO/PNG assets referenced by the bundle and tray configs.
 - `prisma/` – Database schema & migrations (SQLite + SQLCipher).

@@ -114,7 +114,7 @@ export function TransactionsPage() {
     <section className="space-y-6">
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-wide text-slate-500">Stage 2</p>
+          <p className="text-sm uppercase tracking-wide text-slate-500">Transactions</p>
           <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
             Transactions workspace
           </h2>

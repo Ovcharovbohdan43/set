@@ -1,5 +1,7 @@
+mod dashboard;
 mod transactions;
 
+pub use dashboard::*;
 pub use transactions::*;
 
 use serde::Serialize;

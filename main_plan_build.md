@@ -105,7 +105,7 @@
 - **Next Stage**: S3 once ledger events emit reliably.
 - **Status Notes**: ✅ Implemented `SqliteTransactionService`, wired new Tauri commands, delivered the React Transactions cockpit (TanStack Table + Radix Dialog + optimistic mutations), updated docs/testing/checklists, and ran the verification suite (`pnpm lint`, `pnpm typecheck`, `pnpm test`, Prisma commands, `cargo fmt`, `cargo clippy`, `cargo test`).
 
-### Stage 3 - Dashboard & KPI System (Target Week 3)
+### Stage 3 - Dashboard & KPI System (Status: Complete - 2025-11-20)
 - **Entry Criteria**: Transaction events and account balances reliable.
 - **Implementation Checklist**:
   1. Build `DashboardService` to aggregate KPIs (net worth, cash flow, burn rate).
@@ -124,6 +124,7 @@
   - `src/features/dashboard/README.md` (usage, state diagram, tests).
   - `CHANGELOG.md`.
 - **Exit Criteria**: KPI updates accurate, offline warning visible, tests green, docs updated.
+- **Status Notes**: ✅ Implemented `SqliteDashboardService` + `get_dashboard_snapshot`, built the Dashboard page (KPI cards, quick actions, command palette, offline indicator, weekly spend chart, account highlights), wired React Query invalidation via `transaction:changed` events, added keyboard shortcuts, documentation, and verification (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `cargo fmt`, `cargo clippy -- -D warnings`, `cargo test`).
 - **Next Stage**: S4 Budget engine.
 
 ### Stage 4 - Budget Engine (Target Week 4)

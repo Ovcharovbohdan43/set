@@ -23,6 +23,7 @@ import {
   type TransactionFilters,
   type TransactionForm
 } from './schema';
+import { AppEvents, emitAppEvent } from '@/utils/events';
 
 const transactionsKeys = {
   all: ['transactions'] as const,
@@ -77,6 +78,7 @@ export function useCreateTransactionMutation(
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: key });
+      emitAppEvent(AppEvents.transactionsChanged);
     }
   });
 }
@@ -106,6 +108,7 @@ export function useUpdateTransactionMutation(
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: key });
+      emitAppEvent(AppEvents.transactionsChanged);
     }
   });
 }
@@ -134,6 +137,7 @@ export function useDeleteTransactionMutation(
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: key });
+      emitAppEvent(AppEvents.transactionsChanged);
     }
   });
 }
@@ -148,6 +152,7 @@ export function useImportTransactionsMutation(
     mutationFn: importTransactions,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: key });
+      emitAppEvent(AppEvents.transactionsChanged);
     }
   });
 }

@@ -9,4 +9,5 @@ All notable changes will be documented here according to the rules in `.cursor/r
 - Authored `main_plan_build.md`, a Context7-aligned build orchestration plan covering sequencing, tests, and documentation requirements for every stage.
 - Delivered Stage 2 (Accounts & Transactions): `SqliteTransactionService`, new Tauri commands (`list_accounts`, `list_transactions`, etc.), React Transactions page (TanStack Table + Radix Dialog), optimistic mutations, and supporting store/hooks/schemas.
 - Added `docs/transactions.md`, expanded `docs/architecture.md`/`docs/testing.md`, and refreshed `README.md` with the new workflow.
+- Delivered Stage 3 (Dashboard & KPIs): `SqliteDashboardService` + `get_dashboard_snapshot`, responsive Dashboard page (KPI cards, quick actions, command palette & hotkeys, weekly spend chart, account highlights, offline badge), React Router shell, dashboard-specific Vitest/Rust coverage, and updated documentation (`docs/architecture.md`, `docs/testing.md`, `main_plan_build.md`, `README.md`, `src/features/dashboard/README.md`).
 

@@ -8,12 +8,13 @@
 - **How to Test**: Follow the multi-level strategy in Section 14 (unit → integration → e2e) and reuse the provided Vitest and Playwright templates.
 - **Limitations**: Focuses on architecture and process—not a substitute for detailed API reference docs or finalized copywriting; assumes single-tenant local storage with optional multi-device sync.
 - **Modules Impacted**: React UI, Tauri command layer, domain services, SQLite/Prisma data layer, sync engine, background scheduler, notifications, CI/CD, and packaging.
-- **Version**: 1.1.0
+- **Version**: 1.2.0
 - **Last Updated**: 2025-11-20
 
 ## Changelog
 - [2025-11-20] – Added: Initial architecture blueprint, including stack rationale, data model, commands, UX system, analytics, security, packaging, CI/CD, testing, and 10-week roadmap.
 - [2025-11-20] – Changed: Documented the platform foundation (PathState/AppState, ServiceRegistry builder, SQLCipher DSN + env propagation, and Tauri capability configuration for secure filesystem access).
+- [2025-11-20] – Added: Dashboard/KPI implementation details (SqliteDashboardService, `get_dashboard_snapshot`, command palette & quick actions, offline indicator, weekly spend visualization, and new testing expectations).
 
 ---
 
@@ -88,6 +89,7 @@ Notification System      Cloud REST / GraphQL API (JWT, encrypted payloads)
 
 ### 3.3 Business Services
 - `TransactionService`: Validate income/expense/transfer logic, trigger budget recalculations, and persist ledger changes. The Stage 2 implementation (`SqliteTransactionService`) runs inside the Tauri backend using `rusqlite` on the SQLCipher database. It exposes CRUD operations for accounts/categories/transactions, enforces optimistic locking, and ensures `Account.balance_cents` stays in sync by applying deltas whenever transactions are created, updated, deleted, or imported.
+- `DashboardService`: Aggregate KPIs (net worth, cash flow, budget burn, weekly spending) with <50 ms SQL queries, hydrate account highlights, and surface the data via `get_dashboard_snapshot`. Stage 3 ships the `SqliteDashboardService`, which derives deltas from transaction history, sums active budgets, and fills 7-day spend series even when no transactions exist on a given day.
 - `BudgetService`: Manage envelope/period budgets, track actual vs target, compute burn rate for widgets.
 - `GoalService`: Manage savings targets, compute projections, trigger milestone notifications.
 - `ReportService`: Materialize analytics views, cache aggregated rows, produce chart-ready DTOs.
@@ -126,7 +128,8 @@ Notification System      Cloud REST / GraphQL API (JWT, encrypted payloads)
 ### 3.10 Application State & Dependency Injection
 - **PathState**: Resolves `%APPDATA%/<Product>/FinanceApp` using `app.path().app_data_dir()` (per Context7 secure path guidance) and eagerly creates `storage`, `logs`, `attachments`, and `exports` folders. Exposes helpers such as `db_path()` and `database_url(key)` for downstream services.
 - **AppState**: Stores `PathState`, `AppSecrets`, the SQLCipher DSN, and a `ServiceRegistry`. Commands obtain it via `State<AppState>` to read filesystem roots, secrets, or service handles without recalculating paths.
-- **ServiceRegistry**: Provides a builder that accepts concrete implementations for `TransactionService`, `BudgetService`, etc., while defaulting to noop structs until Stage 2. `descriptors()` exposes metadata for diagnostics, and cloning methods (`transaction()`, `budget()`, ...) return `Arc<dyn ...>` handles for command modules.
+- **ServiceRegistry**: Provides a builder that accepts concrete implementations for `TransactionService`, `DashboardService`, `BudgetService`, etc., while defaulting to noop structs until Stage 2. `descriptors()` exposes metadata for diagnostics, and cloning methods (`transaction()`, `dashboard()`, `budget()`, ...) return `Arc<dyn ...>` handles for command modules.
+- **Event & Connectivity Bridges**: The React provider listens to browser online/offline events and updates `useAppStore().isOffline`, enabling the UI banner + quick actions to react instantly. Frontend mutations dispatch `transaction:changed` events; the dashboard hook re-validates cached KPIs when it hears the event, keeping numbers and charts in sync without polling.
 ---
 
 ## 4. Data Model
@@ -415,6 +418,7 @@ enum TransactionType {
 | `deleteTransaction` | `{ id: string }` | `void` | Removes the row and reverses its balance impact. |
 | `importTransactions` | `{ items: CreateTransactionInput[] }` | `TransactionDTO[]` | Bulk insert helper used by CSV/OFX importers and the sample “Import” button on the Transactions page. |
 | `getMonthlyReport` | `{ month: string }` | `MonthlyReportDTO` | Uses `report_cache`, calculates spending trend, anomaly flags. |
+| `getDashboardSnapshot` | `void` | `DashboardSnapshot` | Aggregates net worth, cash flow, budget burn, weekly spend, and account highlights through `SqliteDashboardService`. |
 | `createBudget` | `BudgetInput` | `BudgetDTO` | Creates envelope + seed snapshot. |
 | `scheduleReminder` | `ReminderInput` | `ReminderDTO` | Writes reminder + enqueues scheduler. |
 | `syncUpload` | `{ cursor?: string }` | `{ nextCursor: string }` | Batches deltas, compresses + encrypts payload. |
@@ -426,6 +430,7 @@ enum TransactionType {
 **DTO Highlights**:
 - `TransactionDTO`: includes `id`, `type`, `amount`, `currency`, `occurredOn`, `category`, `account`, `tags`, `notes`, `goal`, `exchangeRate`.
 - `MonthlyReportDTO`: `spendingByCategory[]`, `trendLine`, `incomeVsExpense`, `budgetSummaries[]`, `forecast`.
+- `DashboardSnapshot`: `currency`, `netWorthCents`, `netWorthDeltaCents`, `cashFlowCents`, `cashFlowPreviousCents`, `budgetTotalCents`, `budgetSpentCents`, `weeklySpending[]`, `accounts[]` (top balances).
 
 ### 5.2 Frontend Usage Example
 \```ts
@@ -480,7 +485,7 @@ type Mutation {
 ## 6. UI / UX System
 
 ### 6.1 Pages & Flows
-1. **Dashboard**: KPI cards (net worth, cash flow, budget burn), quick actions (Add transaction, Add goal), mini charts (weekly spend).
+1. **Dashboard**: KPI cards (net worth, cash flow, budget burn), quick actions (Add transaction, Add goal placeholder), command palette (`Ctrl+K`), offline indicator badge, top-account highlights, and mini charts (weekly spend).
 2. **Transactions**: TanStack Table-powered infinite list with filters (account/category/search), inline editing for notes/amount, optimistic CRUD mutations, Radix Dialog quick-add modal, and sample import helper for smoke testing.
 3. **Budgets**: Grid of envelopes with progress rings, variance table, rollover controls.
 4. **Goals**: Kanban-style board (Active/On Track/At Risk/Completed), progress bars, recommendation cards.
@@ -497,6 +502,7 @@ type Mutation {
 - **Financial widgets**: budget indicators, goal widgets, progress bars with Framer Motion.
 - **Chart wrappers**: ECharts components with responsive breakpoints.
 - **Notification center**: toast queue + historical panel.
+- **Command palette overlay**: Radix Dialog + keyboard navigation for quick actions and navigation.
 
 ### 6.3 Interaction Rules
 - **Hotkeys**: `Ctrl+N` (new transaction), `Ctrl+Shift+B` (new budget), `Ctrl+K` (command palette), `Ctrl+/` (toggle keyboard shortcuts).
@@ -722,8 +728,8 @@ jobs:
 ### 14.1 Levels & Goals
 | Level | Goal | Tooling | Sample Coverage |
 | --- | --- | --- | --- |
-| Unit | Validate pure logic (budget math, recurrence parsing) | Vitest | Ensure `BudgetService.calculateBurnRate` handles rollovers & zero targets. |
-| Integration | Ensure Tauri commands + Prisma + encryption pipeline behave end-to-end | Vitest + `@tauri-apps/api` mocks + sqlite memory | `createTransaction` command writes ledger, updates budgets, logs events. |
+| Unit | Validate pure logic (budget math, dashboard KPI math, recurrence parsing) | Vitest | Ensure `BudgetService.calculateBurnRate` handles rollovers & zero targets; `calculatePercent` keeps dashboard burn ≤100%. |
+| Integration | Ensure Tauri commands + Prisma + encryption pipeline behave end-to-end | Vitest + `@tauri-apps/api` mocks + sqlite memory | `createTransaction` command writes ledger, updates budgets, logs events; `getDashboardSnapshot` aggregates KPIs from the same SQLCipher DB. |
 | UI Component | Guarantee components render/behave (Radix modals, charts) | Testing Library + MSW | Transaction table inline edit, chart re-render on filter change. |
 | E2E | Validate golden flows (Add transaction → budget updates → chart refresh) | Playwright (desktop) | Happy path + offline/online toggle scenarios. |
 | Sync/Background | Verify scheduler + sync apply correct states | Vitest worker tests + mocked time | Reminder fired, snoozed, re-queued; sync resolves conflicts. |
@@ -747,6 +753,19 @@ describe('calculateBudgetProgress', () => {
 });
 \```
 **Test Description**: Verifies envelope budgets consider rollover funds and flag alerts when usage exceeds threshold.
+
+\```ts
+import { describe, expect, it } from 'vitest';
+import { calculatePercent } from '@/features/dashboard/utils';
+
+describe('calculatePercent', () => {
+  it('clamps output to 0-100%', () => {
+    expect(calculatePercent(150, 100)).toBe(100);
+    expect(calculatePercent(0, 200)).toBe(0);
+  });
+});
+\```
+**Test Description**: Guards the dashboard burn-rate card from dividing by zero or overflowing 100%, matching the UX indicators.
 
 ### 14.3 Integration Test (Command)
 \```ts
