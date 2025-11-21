@@ -23,11 +23,13 @@ impl SqliteSettingsService {
         db_key: Option<String>,
         user_id: Option<String>,
     ) -> SettingsResult<Self> {
-        Ok(Self {
+        let service = Self {
             db_path,
             db_key,
             user_id: user_id.unwrap_or_else(|| DEFAULT_USER_ID.to_string()),
-        })
+        };
+        service.bootstrap()?;
+        Ok(service)
     }
 
     fn connection(&self) -> SettingsResult<Connection> {
@@ -37,19 +39,77 @@ impl SqliteSettingsService {
                 SettingsServiceError::Database(format!("Failed to open database: {}", err))
             })?;
 
-        if let Err(err) = conn.execute("PRAGMA foreign_keys = ON;", []) {
+            if let Err(err) = conn.execute("PRAGMA foreign_keys = ON;", []) {
             tracing::error!(error = %err, "Failed to enable foreign keys");
             return Err(SettingsServiceError::Database(format!("Failed to enable foreign keys: {}", err)));
         }
 
         if let Some(key) = &self.db_key {
+            // Align behavior with transaction service: if SQLCipher is unavailable, log and continue unencrypted
             if let Err(err) = conn.pragma_update(None, "key", key) {
-                tracing::error!(error = %err, "Failed to apply SQLCipher key for settings service");
-                return Err(SettingsServiceError::Database(format!("Failed to apply SQLCipher key: {}", err)));
+                tracing::warn!(error = %err, "Failed to apply SQLCipher key for settings service; continuing without encryption");
             }
         }
 
         Ok(conn)
+    }
+
+    fn bootstrap(&self) -> SettingsResult<()> {
+        let conn = self.connection()?;
+
+        // Ensure schema exists (first-run) using the canonical migration
+        self.init_schema(&conn)?;
+        // Ensure schema is upgraded to latest shape
+        self.ensure_theme_column(&conn)?;
+
+        // Ensure default user exists after schema is ready
+        self.ensure_user_exists(&conn)?;
+
+        Ok(())
+    }
+
+    fn init_schema(&self, conn: &Connection) -> SettingsResult<()> {
+        // Skip if schema already present
+        let table_exists: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='User')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if table_exists {
+            return Ok(());
+        }
+
+        conn.execute_batch(include_str!("../../../../prisma/migrations/20251120193838_init/migration.sql"))
+            .map_err(|err| {
+                tracing::error!(error = %err, "Failed to initialize settings schema from migration");
+                SettingsServiceError::Database(format!("Failed to initialize schema: {}", err))
+            })?;
+
+        Ok(())
+    }
+
+    fn ensure_theme_column(&self, conn: &Connection) -> SettingsResult<()> {
+        // Add theme_preference if missing (handles existing DBs created before the column was added)
+        let has_column: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info('User') WHERE name = 'theme_preference')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(false);
+
+        if !has_column {
+            conn.execute(
+                r#"ALTER TABLE "User" ADD COLUMN theme_preference TEXT DEFAULT 'auto'"#,
+                [],
+            )
+            .map_err(|err| SettingsServiceError::Database(format!("Failed to add theme_preference column: {}", err)))?;
+        }
+
+        Ok(())
     }
 
     fn ensure_user_exists(&self, conn: &Connection) -> SettingsResult<()> {
@@ -271,3 +331,77 @@ impl SettingsService for SqliteSettingsService {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_temp_service() -> SqliteSettingsService {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let path = tmp.path().to_path_buf();
+        // Keep file alive until service drops
+        std::mem::forget(tmp);
+
+        SqliteSettingsService::new(path, None, Some("seed-user".into())).unwrap()
+    }
+
+    #[test]
+    fn bootstrap_creates_schema_and_user() {
+        let service = setup_temp_service();
+        let settings = service.get_user_settings().expect("settings should load after bootstrap");
+        assert_eq!(settings.id, "seed-user");
+        assert_eq!(settings.default_currency, "USD");
+        assert_eq!(settings.locale, "en-US");
+        assert_eq!(settings.week_starts_on, 1);
+    }
+
+    #[test]
+    fn theme_column_is_added_if_missing() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let path = tmp.path().to_path_buf();
+        std::mem::forget(tmp);
+
+        // Pre-create a User table without theme_preference to simulate older DB
+        let conn = Connection::open(&path).unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE "User" (
+              id TEXT PRIMARY KEY,
+              email TEXT,
+              display_name TEXT,
+              default_currency TEXT NOT NULL,
+              locale TEXT NOT NULL DEFAULT 'en-US',
+              week_starts_on INTEGER NOT NULL DEFAULT 1,
+              telemetry_opt_in INTEGER NOT NULL DEFAULT 0,
+              created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO "User" (id, default_currency, locale, week_starts_on, telemetry_opt_in) VALUES ('seed-user', 'USD', 'en-US', 1, 0);
+            "#,
+        )
+        .unwrap();
+
+        // Service bootstrap should add the missing column and still read settings
+        let service = SqliteSettingsService::new(path, None, Some("seed-user".into())).unwrap();
+        let settings = service.get_user_settings().unwrap();
+        assert_eq!(settings.theme_preference.as_deref(), Some("auto"));
+    }
+
+    #[test]
+    fn update_user_settings_persists_theme() {
+        let service = setup_temp_service();
+        service
+            .update_user_settings(UpdateUserSettingsInput {
+                default_currency: None,
+                locale: None,
+                week_starts_on: None,
+                telemetry_opt_in: None,
+                theme_preference: Some("light".into()),
+                display_name: Some("Test User".into()),
+            })
+            .expect("update should succeed");
+
+        let settings = service.get_user_settings().unwrap();
+        assert_eq!(settings.theme_preference.as_deref(), Some("light"));
+        assert_eq!(settings.display_name.as_deref(), Some("Test User"));
+    }
+}
