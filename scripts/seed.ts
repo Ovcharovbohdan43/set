@@ -183,20 +183,61 @@ async function seedBudgets(userId: string) {
   }
 }
 
-async function seedGoal(userId: string) {
-  await prisma.goal.upsert({
-    where: { id: 'goal-emergency-fund' },
-    update: {},
-    create: {
+async function seedGoals(userId: string) {
+  const goals = [
+    {
       id: 'goal-emergency-fund',
-      user_id: userId,
       name: 'Emergency Fund',
       target_cents: 500000,
       current_cents: 100000,
       status: GOAL_STATUSES.active,
-      priority: 1
+      priority: 2,
+      target_date: null
+    },
+    {
+      id: 'goal-vacation',
+      name: 'Vacation Fund',
+      target_cents: 200000,
+      current_cents: 50000,
+      status: GOAL_STATUSES.active,
+      priority: 1,
+      target_date: new Date(Date.UTC(2025, 6, 1)) // July 2025
+    },
+    {
+      id: 'goal-car',
+      name: 'New Car Down Payment',
+      target_cents: 1000000,
+      current_cents: 250000,
+      status: GOAL_STATUSES.active,
+      priority: 3,
+      target_date: new Date(Date.UTC(2025, 11, 31)) // December 2025
     }
-  });
+  ];
+
+  for (const goal of goals) {
+    await prisma.goal.upsert({
+      where: { id: goal.id },
+      update: {
+        user_id: userId,
+        name: goal.name,
+        target_cents: goal.target_cents,
+        current_cents: goal.current_cents,
+        status: goal.status,
+        priority: goal.priority,
+        target_date: goal.target_date
+      },
+      create: {
+        id: goal.id,
+        user_id: userId,
+        name: goal.name,
+        target_cents: goal.target_cents,
+        current_cents: goal.current_cents,
+        status: goal.status,
+        priority: goal.priority,
+        target_date: goal.target_date
+      }
+    });
+  }
 }
 
 async function seedSampleTransaction(userId: string) {
@@ -222,7 +263,7 @@ async function main() {
   const user = await upsertUser();
   await upsertAccounts(user.id);
   await upsertCategories(user.id);
-  await Promise.all([seedBudgets(user.id), seedGoal(user.id)]);
+  await Promise.all([seedBudgets(user.id), seedGoals(user.id)]);
 
   await seedSampleTransaction(user.id);
 

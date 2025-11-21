@@ -1,9 +1,11 @@
 mod budgets;
 mod dashboard;
+mod goals;
 mod transactions;
 
 pub use budgets::*;
 pub use dashboard::*;
+pub use goals::*;
 pub use transactions::*;
 
 use serde::Serialize;

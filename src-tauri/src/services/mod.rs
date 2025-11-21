@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 pub mod budgets;
 pub mod dashboard;
+pub mod goals;
 pub mod transactions;
 
 pub use budgets::{
@@ -10,6 +11,10 @@ pub use budgets::{
 };
 pub use dashboard::{
     DashboardResult, DashboardService, DashboardServiceError, DashboardSnapshot, SqliteDashboardService,
+};
+pub use goals::{
+    AddContributionInput, CreateGoalInput, GoalDto, GoalResult, GoalService, GoalServiceError,
+    SqliteGoalService, UpdateGoalInput, UpdateGoalStatusInput,
 };
 pub use transactions::{
     AccountDto, CategoryDto, CreateTransactionInput, ImportTransactionsInput,
@@ -30,10 +35,7 @@ impl ServiceDescriptor {
 }
 
 // BudgetService trait is defined in budgets module
-
-pub trait GoalService: Send + Sync {
-    fn descriptor(&self) -> ServiceDescriptor;
-}
+// GoalService trait is defined in goals module
 
 pub trait ReminderService: Send + Sync {
     fn descriptor(&self) -> ServiceDescriptor;
@@ -135,6 +137,38 @@ impl GoalService for NoopGoalService {
     fn descriptor(&self) -> ServiceDescriptor {
         ServiceDescriptor::new("GoalService", "noop")
     }
+
+    fn list_goals(&self) -> GoalResult<Vec<GoalDto>> {
+        not_configured_goal()
+    }
+
+    fn get_goal(&self, _: &str) -> GoalResult<GoalDto> {
+        not_configured_goal()
+    }
+
+    fn create_goal(&self, _: CreateGoalInput) -> GoalResult<GoalDto> {
+        not_configured_goal()
+    }
+
+    fn update_goal(&self, _: UpdateGoalInput) -> GoalResult<GoalDto> {
+        not_configured_goal()
+    }
+
+    fn update_goal_status(&self, _: UpdateGoalStatusInput) -> GoalResult<GoalDto> {
+        not_configured_goal()
+    }
+
+    fn add_contribution(&self, _: AddContributionInput) -> GoalResult<GoalDto> {
+        not_configured_goal()
+    }
+
+    fn delete_goal(&self, _: &str) -> GoalResult<()> {
+        not_configured_goal()
+    }
+
+    fn calculate_projection(&self, _: &str) -> GoalResult<(f64, Option<String>)> {
+        not_configured_goal()
+    }
 }
 
 impl ReminderService for NoopReminderService {
@@ -203,7 +237,6 @@ impl ServiceRegistry {
         Arc::clone(&self.budget)
     }
 
-    #[allow(dead_code)]
     pub fn goal(&self) -> Arc<dyn GoalService> {
         Arc::clone(&self.goal)
     }
@@ -254,7 +287,6 @@ impl ServiceRegistryBuilder {
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_goal<T>(mut self, service: T) -> Self
     where
         T: GoalService + 'static,
@@ -314,5 +346,11 @@ fn not_configured_dashboard<T>() -> DashboardResult<T> {
 fn not_configured_budget<T>() -> BudgetResult<T> {
     Err(BudgetServiceError::Internal(
         "BudgetService is not configured".to_string(),
+    ))
+}
+
+fn not_configured_goal<T>() -> GoalResult<T> {
+    Err(GoalServiceError::Internal(
+        "GoalService is not configured".to_string(),
     ))
 }

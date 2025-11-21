@@ -58,8 +58,22 @@ All commands executed on Windows 10 (PowerShell) after installing pnpm via `npm 
 | `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new budget service/commands. |
 | `cargo test` | ✅ Passed | Exercises Rust unit tests (`calculate_progress` logic for normal/atRisk/over statuses). |
 
-## 5. Next Test Milestones
-- **Week 5**: Goal board tests + notification assertions.
+## 5. Goals & Savings (Week 5, 2025-11-20)
+- **Scope**: `SqliteGoalService`, goal CRUD commands, Goals UI (Kanban board, progress bars, status transitions), projection calculations, seed script updates.
+- **Environment Notes**: Goals calculate current amounts from transactions with matching `goal_id`. Ensure test transactions are linked to goals for accurate progress tracking.
+- **Executed Commands**
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm lint` | ✅ Passed | Verified new goal components/hooks comply with ESLint + Tailwind rules. |
+| `pnpm typecheck` | ✅ Passed | Validated goal schemas, API types, and form components. |
+| `pnpm test` | ✅ Passed | Ran full Vitest suite (including `tests/unit/goals/utils.test.ts`). |
+| `cargo fmt --check` | ✅ Passed | Ensured `SqliteGoalService` + command modules stay formatted. |
+| `cargo clippy -- -D warnings` | ✅ Passed | Verified no warnings in the new goal service/commands. |
+| `cargo test` | ✅ Passed | Exercises Rust unit tests (`calculate_projection` logic). |
+
+## 6. Next Test Milestones
+- **Week 6**: Reminder scheduler tests + notification assertions.
 - **Continuous**: Mirror new tests in CI by upgrading `.github/workflows/ci.yml` placeholders to real steps (e.g., `pnpm test:e2e`).
 
 ## 5. Platform Foundation (Week 1, 2025-11-20)

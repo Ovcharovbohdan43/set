@@ -149,7 +149,7 @@
 - **Status Notes**: ✅ Implemented `SqliteBudgetService` with progress calculation and status detection (Normal/At Risk/Over), created Tauri commands for budget CRUD operations, built Budgets UI page with responsive grid layout, progress rings, and inline edit/delete, added color-coded status indicators, updated seed script with starter budgets, wrote unit tests for utils, and updated all documentation.
 - **Next Stage**: S5 Goals.
 
-### Stage 5 - Goals & Savings (Target Week 5)
+### Stage 5 - Goals & Savings (Status: Complete - 2025-11-20)
 - **Entry Criteria**: Budgets running; transactions linkable to goals.
 - **Implementation Checklist**:
   1. Implement `GoalService` (targets, checkpoints, statuses, projections).
@@ -167,6 +167,7 @@
   - `src/features/goals/README.md`.
   - `CHANGELOG.md`.
 - **Exit Criteria**: Goal statuses accurate, notifications fire, docs/tests done.
+- **Status Notes**: ✅ Implemented `SqliteGoalService` with progress calculation, projection logic, and auto-achievement, created Tauri commands for goal CRUD operations, built Goals UI page with Kanban board layout (4 status columns), progress bars, and inline status changes, added projection calculations with target dates, updated seed script with starter goals, wrote unit tests for utils, and updated all documentation.
 - **Next Stage**: S6 Reminders.
 
 ### Stage 6 - Reminders & Notifications (Target Week 6)

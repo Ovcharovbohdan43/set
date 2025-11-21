@@ -4,6 +4,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 
 import { BudgetsPage } from '@/features/budgets/components/BudgetsPage';
 import { DashboardPage } from '@/features/dashboard/components/DashboardPage';
+import { GoalsPage } from '@/features/goals/components/GoalsPage';
 import { TransactionsPage } from '@/features/transactions/components/TransactionsPage';
 import { useAppStore } from '@/store';
 
@@ -63,6 +64,18 @@ export default function App() {
               >
                 Budgets
               </NavLink>
+              <NavLink
+                to="/goals"
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-1.5 font-medium transition ${
+                    isActive
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`
+                }
+              >
+                Goals
+              </NavLink>
             </nav>
           </div>
         </div>
@@ -80,6 +93,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
             <Route path="/budgets" element={<BudgetsPage />} />
+            <Route path="/goals" element={<GoalsPage />} />
           </Routes>
         </Suspense>
       </main>

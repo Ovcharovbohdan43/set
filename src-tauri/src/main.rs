@@ -8,7 +8,7 @@ mod state;
 
 use std::{env, io};
 
-use services::{ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteTransactionService};
+use services::{ServiceRegistry, SqliteBudgetService, SqliteDashboardService, SqliteGoalService, SqliteTransactionService};
 use state::PathState;
 use tauri::Manager;
 
@@ -52,10 +52,18 @@ fn main() {
             )
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
+            let goal_service = SqliteGoalService::new(
+                paths.db_path().to_path_buf(),
+                Some(secrets.sqlcipher_key().to_string()),
+                None,
+            )
+            .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
+
             let services = ServiceRegistry::builder()
                 .with_transaction(transaction_service)
                 .with_dashboard(dashboard_service)
                 .with_budget(budget_service)
+                .with_goal(goal_service)
                 .build();
             let app_state = state::AppState::new(paths, secrets, services, database_url);
             app.manage(app_state);
@@ -85,7 +93,14 @@ fn main() {
             commands::create_budget,
             commands::update_budget,
             commands::delete_budget,
-            commands::record_snapshot
+            commands::record_snapshot,
+            commands::list_goals,
+            commands::get_goal,
+            commands::create_goal,
+            commands::update_goal,
+            commands::update_goal_status,
+            commands::add_contribution,
+            commands::delete_goal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
