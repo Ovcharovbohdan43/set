@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use chrono::{Duration, NaiveDate, Utc};
-use rusqlite::{params, Connection};
+use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime, Timelike};
+use rusqlite::{params, params_from_iter, Connection, ToSql};
 use serde::Serialize;
 use thiserror::Error;
 
@@ -104,15 +104,22 @@ impl SqliteDashboardService {
     }
 
     fn net_worth(&self, conn: &Connection) -> DashboardResult<i64> {
-        let total: i64 = conn
+        // Активы: cash/checking/savings/investment/wallet. Всё остальное считаем пассивами.
+        let (assets, liabilities): (i64, i64) = conn
             .query_row(
-                r#"SELECT COALESCE(SUM(balance_cents), 0) FROM "Account" WHERE user_id = ?"#,
+                r#"
+                SELECT
+                  COALESCE(SUM(CASE WHEN type IN ('cash','checking','savings','investment','wallet') THEN balance_cents ELSE 0 END), 0) as assets,
+                  COALESCE(SUM(CASE WHEN type NOT IN ('cash','checking','savings','investment','wallet') THEN balance_cents ELSE 0 END), 0)  as liabilities
+                FROM "Account"
+                WHERE user_id = ?
+                "#,
                 params![self.user_id],
-                |row| row.get(0),
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )
-            .unwrap_or(0);
+            .unwrap_or((0, 0));
 
-        Ok(total)
+        Ok(assets - liabilities.abs())
     }
 
     fn net_worth_delta(&self, conn: &Connection) -> DashboardResult<i64> {
@@ -134,6 +141,13 @@ impl SqliteDashboardService {
     }
 
     fn cash_flow(&self, conn: &Connection) -> DashboardResult<(i64, i64)> {
+        // Берём 30 полных дней, локальная тайм-зона, [start, end)
+        let today = Local::now().date_naive();
+        let current_start = start_of_day(today - Duration::days(29));
+        let current_end = start_of_day(today + Duration::days(1));
+        let previous_start = start_of_day(today - Duration::days(59));
+        let previous_end = start_of_day(today - Duration::days(29));
+
         let current: i64 = conn
             .query_row(
                 r#"
@@ -142,9 +156,15 @@ impl SqliteDashboardService {
                     WHEN type = 'expense' THEN -amount_cents 
                     ELSE 0 END), 0)
                 FROM "Transaction"
-                WHERE user_id = ? AND datetime(occurred_on) >= datetime('now', '-30 days')
+                WHERE user_id = ? 
+                  AND datetime(occurred_on) >= datetime(?)
+                  AND datetime(occurred_on) <  datetime(?)
             "#,
-                params![self.user_id],
+                params![
+                    self.user_id,
+                    format_iso_start(current_start),
+                    format_iso_start(current_end)
+                ],
                 |row| row.get(0),
             )
             .unwrap_or(0);
@@ -158,10 +178,14 @@ impl SqliteDashboardService {
                     ELSE 0 END), 0)
                 FROM "Transaction"
                 WHERE user_id = ?
-                  AND datetime(occurred_on) < datetime('now', '-30 days')
-                  AND datetime(occurred_on) >= datetime('now', '-60 days')
+                  AND datetime(occurred_on) >= datetime(?)
+                  AND datetime(occurred_on) <  datetime(?)
             "#,
-                params![self.user_id],
+                params![
+                    self.user_id,
+                    format_iso_start(previous_start),
+                    format_iso_start(previous_end)
+                ],
                 |row| row.get(0),
             )
             .unwrap_or(0);
@@ -175,7 +199,8 @@ impl SqliteDashboardService {
             SELECT id, amount_cents, start_date, end_date, category_id
             FROM "Budget"
             WHERE user_id = ?
-              AND datetime('now') BETWEEN datetime(start_date) AND datetime(end_date)
+              AND datetime('now', 'localtime') >= datetime(start_date)
+              AND datetime('now', 'localtime') < datetime(end_date)
         "#,
         )?;
 
@@ -188,66 +213,75 @@ impl SqliteDashboardService {
             let start: String = row.get(2)?;
             let end: String = row.get(3)?;
             let category_id: Option<String> = row.get(4)?;
+            let categories = parse_categories(category_id.clone());
 
             total += amount;
 
-            let period_spent: i64 = conn
-                .query_row(
+            let period_spent: i64 = if categories.is_empty() {
+                conn.query_row(
                     r#"
                     SELECT COALESCE(SUM(amount_cents), 0)
                     FROM "Transaction"
                     WHERE user_id = ?
                       AND type = 'expense'
-                      AND datetime(occurred_on) BETWEEN datetime(?) AND datetime(?)
-                      AND (? IS NULL OR category_id = ?)
+                      AND datetime(occurred_on) >= datetime(?)
+                      AND datetime(occurred_on) <  datetime(?)
                 "#,
-                    params![
-                        self.user_id,
-                        start,
-                        end,
-                        category_id.clone(),
-                        category_id.clone()
-                    ],
+                    params![self.user_id, start, end],
                     |r| r.get(0),
                 )
-                .unwrap_or(0);
+                .unwrap_or(0)
+            } else {
+                let placeholders = format!("({})", std::iter::repeat("?").take(categories.len()).collect::<Vec<_>>().join(","));
+                let mut sql = format!(
+                    r#"
+                    SELECT COALESCE(SUM(amount_cents), 0)
+                    FROM "Transaction"
+                    WHERE user_id = ?
+                      AND type = 'expense'
+                      AND datetime(occurred_on) >= datetime(?)
+                      AND datetime(occurred_on) <  datetime(?)
+                      AND category_id IN {}
+                "#,
+                    placeholders
+                );
+                let mut params: Vec<Box<dyn ToSql>> =
+                    vec![Box::new(self.user_id.clone()), Box::new(start), Box::new(end)];
+                for cat in categories {
+                    params.push(Box::new(cat));
+                }
+                let sqlite_params = params_from_iter(params.iter().map(|p| &**p));
+                conn.query_row(&sql, sqlite_params, |r| r.get(0)).unwrap_or(0)
+            };
 
             spent += period_spent;
-        }
-
-        if total == 0 {
-            let fallback_spent = conn
-                .query_row(
-                    r#"
-                    SELECT COALESCE(SUM(amount_cents), 0)
-                    FROM "Transaction"
-                    WHERE user_id = ?
-                      AND type = 'expense'
-                      AND datetime(occurred_on) >= datetime('now', '-30 days')
-                "#,
-                    params![self.user_id],
-                    |r| r.get(0),
-                )
-                .unwrap_or(0);
-            return Ok((fallback_spent.max(1), fallback_spent));
         }
 
         Ok((total, spent))
     }
 
     fn weekly_spending(&self, conn: &Connection) -> DashboardResult<Vec<WeeklySpendingPoint>> {
+        let today = Local::now().date_naive();
+        let week_start = start_of_week_sunday(today);
+        let week_end = week_start + Duration::days(7);
+
         let mut stmt = conn.prepare(
             r#"
-            SELECT strftime('%Y-%m-%d', datetime(occurred_on)) as day,
+            SELECT strftime('%Y-%m-%d', datetime(occurred_on, 'localtime')) as day,
                    COALESCE(SUM(amount_cents), 0) as total
             FROM "Transaction"
             WHERE user_id = ?
               AND type = 'expense'
-              AND datetime(occurred_on) >= datetime('now', '-6 days')
+              AND datetime(occurred_on) >= datetime(?)
+              AND datetime(occurred_on) <  datetime(?)
             GROUP BY day
         "#,
         )?;
-        let mut rows = stmt.query(params![self.user_id.clone()])?;
+        let mut rows = stmt.query(params![
+            self.user_id.clone(),
+            format_iso_start(start_of_day(week_start)),
+            format_iso_start(start_of_day(week_end))
+        ])?;
         let mut totals_by_day: HashMap<String, i64> = HashMap::new();
         while let Some(row) = rows.next()? {
             let day: String = row.get(0)?;
@@ -255,8 +289,7 @@ impl SqliteDashboardService {
             totals_by_day.insert(day, total);
         }
 
-        let today = Utc::now().date_naive();
-        Ok(build_weekly_series(today, &totals_by_day))
+        Ok(build_weekly_series(week_start, &totals_by_day))
     }
 
     fn account_highlights(&self, conn: &Connection) -> DashboardResult<Vec<AccountHighlight>> {
@@ -265,7 +298,7 @@ impl SqliteDashboardService {
             SELECT id, name, type, color_token, balance_cents
             FROM "Account"
             WHERE user_id = ?
-            ORDER BY balance_cents DESC
+            ORDER BY abs(balance_cents) DESC
             LIMIT 4
         "#,
         )?;
@@ -287,12 +320,12 @@ impl SqliteDashboardService {
 }
 
 fn build_weekly_series(
-    today: NaiveDate,
+    week_start: NaiveDate,
     totals_by_day: &HashMap<String, i64>,
 ) -> Vec<WeeklySpendingPoint> {
     let mut series = Vec::with_capacity(7);
-    for days_back in (0..7).rev() {
-        let date = today - Duration::days(days_back);
+    for offset in 0..7 {
+        let date = week_start + Duration::days(offset);
         let key = date.format("%Y-%m-%d").to_string();
         let amount = *totals_by_day.get(&key).unwrap_or(&0);
         series.push(WeeklySpendingPoint {
@@ -301,6 +334,37 @@ fn build_weekly_series(
         });
     }
     series
+}
+
+fn start_of_day(date: NaiveDate) -> NaiveDateTime {
+    date.and_hms_opt(0, 0, 0).unwrap()
+}
+
+fn format_iso_start(date: NaiveDateTime) -> String {
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
+        date.year(),
+        date.month(),
+        date.day(),
+        date.hour(),
+        date.minute(),
+        date.second()
+    )
+}
+
+fn start_of_week_sunday(today: NaiveDate) -> NaiveDate {
+    let days_from_sunday = today.weekday().num_days_from_sunday() as i64;
+    today - Duration::days(days_from_sunday)
+}
+
+fn parse_categories(value: Option<String>) -> Vec<String> {
+    value
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
 }
 
 impl DashboardService for SqliteDashboardService {
@@ -352,12 +416,12 @@ mod tests {
 
     #[test]
     fn fills_weekly_series_with_zeroes() {
-        let today = NaiveDate::from_ymd_opt(2025, 1, 7).unwrap();
+        let week_start = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
         let map = HashMap::from([
             ("2025-01-01".to_string(), 1200),
             ("2025-01-06".to_string(), 8300),
         ]);
-        let series = build_weekly_series(today, &map);
+        let series = build_weekly_series(week_start, &map);
         assert_eq!(series.len(), 7);
         assert_eq!(series[0].date, "2025-01-01");
         assert_eq!(series[0].amount_cents, 1200);

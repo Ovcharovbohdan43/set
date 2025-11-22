@@ -51,14 +51,17 @@ impl SqliteGoalService {
     }
 
     fn calculate_current(&self, conn: &Connection, goal_id: &str) -> GoalResult<i64> {
+        // Доходы увеличивают накопления, расходы уменьшают
         let current: i64 = conn
             .query_row(
                 r#"
-                SELECT COALESCE(SUM(amount_cents), 0)
+                SELECT COALESCE(SUM(CASE 
+                    WHEN type = 'income' THEN amount_cents 
+                    WHEN type = 'expense' THEN -amount_cents 
+                    ELSE 0 END), 0)
                 FROM "Transaction"
                 WHERE user_id = ? 
                   AND goal_id = ?
-                  AND type IN ('income', 'transfer')
                 "#,
                 params![self.user_id, goal_id],
                 |row| row.get(0),
@@ -78,7 +81,7 @@ impl SqliteGoalService {
             return (0.0, None);
         }
 
-        let progress = (current_cents as f64 / target_cents as f64) * 100.0;
+        let progress = ((current_cents as f64 / target_cents as f64) * 100.0).clamp(0.0, 100.0);
 
         if let Some(target_date_str) = target_date {
             if let Ok(target) = DateTime::parse_from_rfc3339(target_date_str) {
@@ -387,20 +390,20 @@ impl GoalService for SqliteGoalService {
         let conn = self.connection()?;
         let goal = self.fetch_goal_row(&conn, &input.goal_id)?;
 
-        let new_current = goal.current_cents + input.amount_cents;
-
+        // Храним сумму в целевой таблице, но учитываем текущие транзакции, чтобы статус/прогресс основывались на реальных движениях
         conn.execute(
             r#"
             UPDATE "Goal"
-            SET current_cents = ?, updated_at = CURRENT_TIMESTAMP
+            SET current_cents = current_cents + ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ? AND user_id = ?
             "#,
-            params![new_current, input.goal_id, self.user_id],
+            params![input.amount_cents, input.goal_id, self.user_id],
         )
         .map_err(|err| GoalServiceError::Database(err.to_string()))?;
 
-        // Auto-achieve if target reached
-        if new_current >= goal.target_cents {
+        // Авто-достижение при закрытии цели
+        let recalculated = self.calculate_current(&conn, &input.goal_id)?;
+        if recalculated >= goal.target_cents {
             conn.execute(
                 r#"
                 UPDATE "Goal"

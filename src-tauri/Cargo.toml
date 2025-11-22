@@ -2,6 +2,7 @@
 name = "personal-finance-desktop"
 version = "0.1.0"
 edition = "2021"
+default-run = "personal-finance-desktop"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

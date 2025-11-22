@@ -6,6 +6,7 @@ pub mod goals;
 pub mod reminders;
 pub mod reports;
 pub mod settings;
+pub mod planning;
 pub mod sync;
 pub mod transactions;
 
@@ -22,8 +23,8 @@ pub use goals::{
     SqliteGoalService, UpdateGoalInput, UpdateGoalStatusInput,
 };
 pub use reminders::{
-    CreateReminderInput, ReminderDto, ReminderResult, ReminderService, ReminderServiceError,
-    SnoozeReminderInput, SqliteReminderService, UpdateReminderInput,
+    CreateReminderInput, DismissReminderInput, ReminderDto, ReminderResult, ReminderService,
+    ReminderServiceError, SnoozeReminderInput, SqliteReminderService, UpdateReminderInput,
 };
 pub use reports::{
     MonthlyReportDto, MonthlyTrendDto, ReportResult, ReportService, ReportServiceError,
@@ -36,6 +37,14 @@ pub use settings::{
 pub use sync::{
     SqliteSyncService, SyncDownloadInput, SyncDownloadResult, SyncService, SyncServiceError,
     SyncServiceResult, SyncUploadInput, SyncUploadResult,
+};
+pub use planning::{
+    AddDebtAccountInput, AddPlannedExpenseInput, AddPlannedIncomeInput, CreateMonthlyPlanInput,
+    AddPlannedSavingInput, DebtAccountDto, DeleteDebtAccountInput, DeletePlannedExpenseInput,
+    DeletePlannedIncomeInput, DeletePlannedSavingInput, MonthlyPlanDto, PlannedExpenseDto,
+    PlannedIncomeDto, PlannedSavingDto, PlanningError, PlanningResult, PlanningService, DebtScheduleDto,
+    UpdateDebtAccountInput, UpdatePlannedExpenseInput, UpdatePlannedIncomeInput,
+    UpdatePlannedSavingInput, GenerateDebtScheduleInput, ConfirmDebtPaymentInput,
 };
 pub use transactions::{
     AccountDto, CategoryDto, CreateTransactionInput, ImportTransactionsInput,
@@ -213,6 +222,10 @@ impl ReminderService for NoopReminderService {
     }
 
     fn snooze_reminder(&self, _: SnoozeReminderInput) -> ReminderResult<ReminderDto> {
+        not_configured_reminder()
+    }
+
+    fn dismiss_reminder(&self, _: DismissReminderInput) -> ReminderResult<ReminderDto> {
         not_configured_reminder()
     }
 

@@ -62,6 +62,14 @@ cargo test
 - **Manual (weekly)**: KPI refresh smoke (add transaction → dashboard updates), reminder toast/in-app check, export/import CSV/JSON, verify settings persist.
 - **Security/Health**: Run `pnpm audit`, `cargo audit` monthly; review `%APPDATA%/FinanceApp/storage/logs` for ERRORs; scrub PII before sharing.
 - **Hotfix Gate**: `pnpm lint && pnpm typecheck && pnpm test && cargo test && pnpm test:e2e --reporter=list` prior to signing.
+
+## 12. Planning Layer (Backend + Basic UI)
+- **Scope**: New planning tables + Tauri commands; basic Planning UI (plan list, add income/expense placeholders).
+- **Commands added**: `create_monthly_plan`, `list_monthly_plans`, `add_planned_income`, `list_planned_incomes`, `add_planned_expense`, `list_planned_expenses`.
+- **Tests**:
+  - `cargo test --manifest-path src-tauri/Cargo.toml` (includes PlanningService unit test).
+  - `pnpm typecheck` (validates new frontend schemas/API/hooks).
+- **Next**: expand plan-vs-actual, debt/savings, charts, and real CRUD UX.
 
 ## 11. Next Test Milestones
 - **Continuous**: Mirror new tests in CI by upgrading `.github/workflows/ci.yml` placeholders to real steps (e.g., `pnpm test:e2e`).

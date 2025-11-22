@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
-use rusqlite::{params, Connection};
+use rusqlite::{params, params_from_iter, Connection, ToSql};
 use uuid::Uuid;
 
 use crate::services::ServiceDescriptor;
@@ -52,27 +52,46 @@ impl SqliteBudgetService {
 
     fn calculate_spent(&self, conn: &Connection, budget_id: &str) -> BudgetResult<i64> {
         let budget = self.fetch_budget_row(conn, budget_id)?;
+        let categories = parse_categories(budget.category_id.clone());
 
-        let spent: i64 = conn
-            .query_row(
+        let spent: i64 = if categories.is_empty() {
+            conn.query_row(
                 r#"
                 SELECT COALESCE(SUM(amount_cents), 0)
                 FROM "Transaction"
                 WHERE user_id = ? 
-                  AND category_id = ?
                   AND type = 'expense'
                   AND occurred_on >= ? 
-                  AND occurred_on <= ?
+                  AND occurred_on < ?
                 "#,
-                params![
-                    self.user_id,
-                    budget.category_id,
-                    budget.start_date,
-                    budget.end_date
-                ],
+                params![self.user_id, budget.start_date, budget.end_date],
                 |row| row.get(0),
             )
-            .unwrap_or(0);
+            .unwrap_or(0)
+        } else {
+            let placeholders = format!("({})", std::iter::repeat("?").take(categories.len()).collect::<Vec<_>>().join(","));
+            let sql = format!(
+                r#"
+                SELECT COALESCE(SUM(amount_cents), 0)
+                FROM "Transaction"
+                WHERE user_id = ? 
+                  AND type = 'expense'
+                  AND occurred_on >= ? 
+                  AND occurred_on < ?
+                  AND category_id IN {}
+                "#,
+                placeholders
+            );
+
+            let mut params: Vec<Box<dyn ToSql>> =
+                vec![Box::new(self.user_id.clone()), Box::new(budget.start_date.clone()), Box::new(budget.end_date.clone())];
+            for cat in categories {
+                params.push(Box::new(cat));
+            }
+            let sqlite_params = params_from_iter(params.iter().map(|p| &**p));
+            conn.query_row(&sql, sqlite_params, |row| row.get(0))
+                .unwrap_or(0)
+        };
 
         Ok(spent)
     }
@@ -87,7 +106,8 @@ impl SqliteBudgetService {
             return (0.0, BudgetStatus::Normal);
         }
 
-        let progress = (spent_cents as f64 / amount_cents as f64) * 100.0;
+        let raw_progress = (spent_cents as f64 / amount_cents as f64) * 100.0;
+        let progress = raw_progress.clamp(0.0, 100.0);
         let threshold_percent = alert_threshold * 100.0;
 
         let status = if progress >= 100.0 {
@@ -155,7 +175,7 @@ impl SqliteBudgetService {
 
     fn row_to_dto(&self, conn: &Connection, row: BudgetRow) -> BudgetResult<BudgetDto> {
         let spent = self.calculate_spent(conn, &row.id)?;
-        let remaining = row.amount_cents - spent;
+        let remaining = (row.amount_cents - spent).max(0);
         let (progress_percent, status) =
             self.calculate_progress(row.amount_cents, spent, row.alert_threshold);
 
@@ -480,12 +500,22 @@ impl BudgetService for SqliteBudgetService {
         let conn = self.connection()?;
         let budget = self.fetch_budget_row(&conn, budget_id)?;
         let spent = self.calculate_spent(&conn, budget_id)?;
-        let remaining = budget.amount_cents - spent;
+        let remaining = (budget.amount_cents - spent).max(0);
         let (progress_percent, status) =
             self.calculate_progress(budget.amount_cents, spent, budget.alert_threshold);
 
         Ok((spent, remaining, progress_percent, status))
     }
+}
+
+fn parse_categories(value: Option<String>) -> Vec<String> {
+    value
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
 }
 
 #[cfg(test)]

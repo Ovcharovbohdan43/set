@@ -18,6 +18,7 @@
 - [2025-01-20] – Added: Reports & Analytics implementation details (SqliteReportService with caching and forecast, ECharts visualizations, export pipeline for CSV/JSON/encrypted JSON/PNG, query optimization with indexes, and export/import documentation).
 - [2025-11-21] - Added: Packaging & Sync enablement (SqliteSyncService, Fastify sync gateway skeleton with JWT/HMAC envelopes, Settings sync UI, MSIX bundling/signing defaults, updater endpoint, CI release job, and nightly sync test workflow).
 - [2025-11-21] - Added: Hardening & Beta (telemetry opt-in/out flow guidance, crash reporting/log rotation expectations, performance targets, and beta validation references).
+- [2025-11-21] - Added: Planning Layer backend schemas and commands (MonthlyPlan, PlannedIncome/Expense/Saving, DebtAccount/Schedule, PlanningService commands).
 
 ---
 

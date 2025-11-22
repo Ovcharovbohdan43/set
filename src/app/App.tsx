@@ -13,6 +13,7 @@ import type { Reminder } from '@/features/reminders/schema';
 import { ReportsPage } from '@/features/reports/components/ReportsPage';
 import { SettingsPage } from '@/features/settings/components/SettingsPage';
 import { TransactionsPage } from '@/features/transactions/components/TransactionsPage';
+import { PlanningPage } from '@/features/planning/components/PlanningPage';
 import { useAppStore } from '@/store';
 
 export default function App() {
@@ -206,6 +207,18 @@ export default function App() {
               >
                 Settings
               </NavLink>
+              <NavLink
+                to="/planning"
+                className={({ isActive }) =>
+                  `rounded-full px-4 py-1.5 font-medium transition ${
+                    isActive
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`
+                }
+              >
+                Planning
+              </NavLink>
             </nav>
           </div>
         </div>
@@ -227,6 +240,7 @@ export default function App() {
             <Route path="/reminders" element={<RemindersPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/planning" element={<PlanningPage />} />
           </Routes>
         </Suspense>
       </main>

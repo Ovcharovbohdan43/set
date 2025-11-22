@@ -26,6 +26,7 @@ fn main() {
             let app_handle = app.handle();
             let paths = PathState::initialize(&app_handle)?;
             logging::init_logging(&app_handle, paths.logs_dir())?;
+            println!("Using database at {}", paths.db_path().display());
 
             let service_name = app.config().identifier.clone();
             let secrets = secrets::load_or_create(&service_name, paths.secrets_file())
@@ -38,66 +39,39 @@ fn main() {
                 paths.db_path().to_string_lossy().to_string(),
             );
 
-            let transaction_service = SqliteTransactionService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let transaction_service = SqliteTransactionService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
-            let dashboard_service = SqliteDashboardService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let dashboard_service =
+                SqliteDashboardService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
-            let budget_service = SqliteBudgetService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let budget_service = SqliteBudgetService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
-            let goal_service = SqliteGoalService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let goal_service = SqliteGoalService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
-            let reminder_service = SqliteReminderService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let reminder_service =
+                SqliteReminderService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
             // Create a second instance for scheduler (lightweight, only stores path and key)
-            let reminder_service_for_scheduler = SqliteReminderService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let reminder_service_for_scheduler =
+                SqliteReminderService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
-            let report_service = SqliteReportService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let report_service =
+                SqliteReportService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
-            let settings_service = SqliteSettingsService::new(
-                paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
-                None,
-            )
+            let settings_service =
+                SqliteSettingsService::new(paths.db_path().to_path_buf(), None, None)
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
 
             let sync_service = SqliteSyncService::new(
                 paths.db_path().to_path_buf(),
-                Some(secrets.sqlcipher_key().to_string()),
+                None,
                 std::env::var("PF_SYNC_ENDPOINT").ok(),
             )
             .map_err(|err| tauri::Error::Io(io::Error::other(err.to_string())))?;
@@ -178,7 +152,29 @@ fn main() {
             commands::read_import_file,
             commands::decrypt_encrypted_json,
             commands::sync_upload,
-            commands::sync_download
+            commands::sync_download,
+            commands::create_monthly_plan,
+            commands::list_monthly_plans,
+            commands::add_planned_income,
+            commands::list_planned_incomes,
+            commands::update_planned_income,
+            commands::delete_planned_income,
+            commands::add_planned_expense,
+            commands::list_planned_expenses,
+            commands::update_planned_expense,
+            commands::delete_planned_expense,
+            commands::add_planned_saving,
+            commands::list_planned_savings,
+            commands::update_planned_saving,
+            commands::delete_planned_saving,
+            commands::add_debt_account,
+            commands::list_debt_accounts,
+            commands::update_debt_account,
+            commands::delete_debt_account,
+            commands::generate_debt_schedule,
+            commands::list_debt_schedule,
+            commands::confirm_debt_payment,
+            commands::plan_vs_actual
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

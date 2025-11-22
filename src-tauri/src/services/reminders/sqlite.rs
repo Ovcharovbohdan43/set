@@ -6,10 +6,11 @@ use uuid::Uuid;
 
 use crate::services::ServiceDescriptor;
 
-use super::{
-    CreateReminderInput, ReminderChannel, ReminderDto, ReminderResult, ReminderService,
-    ReminderServiceError, ReminderStatus, SnoozeReminderInput, UpdateReminderInput,
-};
+    use super::{
+        CreateReminderInput, DismissReminderInput, ReminderChannel, ReminderDto, ReminderResult,
+        ReminderService, ReminderServiceError, ReminderStatus, SnoozeReminderInput,
+        UpdateReminderInput,
+    };
 
 const DEFAULT_USER_ID: &str = "seed-user";
 
@@ -457,10 +458,16 @@ impl ReminderService for SqliteReminderService {
         conn.execute(
             r#"
             UPDATE "Reminder"
-            SET next_fire_at = ?, status = 'snoozed', snooze_minutes = ?
+            SET next_fire_at = ?, due_at = ?, status = 'snoozed', snooze_minutes = ?
             WHERE id = ? AND user_id = ?
             "#,
-            params![next_fire, input.snooze_minutes, input.id, self.user_id],
+            params![
+                next_fire,
+                next_fire,
+                input.snooze_minutes,
+                input.id,
+                self.user_id
+            ],
         )
         .map_err(|err| ReminderServiceError::Database(err.to_string()))?;
 
@@ -470,6 +477,25 @@ impl ReminderService for SqliteReminderService {
             "snoozed",
             Some(&format!("{} minutes", input.snooze_minutes)),
         )?;
+
+        self.get_reminder(&input.id)
+    }
+
+    fn dismiss_reminder(&self, input: DismissReminderInput) -> ReminderResult<ReminderDto> {
+        let conn = self.connection()?;
+        self.fetch_reminder_row(&conn, &input.id)?;
+
+        conn.execute(
+            r#"
+            UPDATE "Reminder"
+            SET status = 'dismissed', next_fire_at = NULL
+            WHERE id = ? AND user_id = ?
+            "#,
+            params![input.id, self.user_id],
+        )
+        .map_err(|err| ReminderServiceError::Database(err.to_string()))?;
+
+        self.log_action(&conn, &input.id, "dismissed", None)?;
 
         self.get_reminder(&input.id)
     }
@@ -500,7 +526,7 @@ impl ReminderService for SqliteReminderService {
                 FROM "Reminder" r
                 LEFT JOIN "Account" a ON r.account_id = a.id
                 WHERE r.user_id = ? 
-                  AND r.status = 'scheduled'
+                  AND r.status IN ('scheduled','snoozed')
                   AND r.next_fire_at IS NOT NULL
                   AND r.next_fire_at <= ?
                 ORDER BY r.next_fire_at ASC

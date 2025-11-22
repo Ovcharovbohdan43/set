@@ -112,6 +112,12 @@ pub struct SnoozeReminderInput {
     pub snooze_minutes: i32,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DismissReminderInput {
+    pub id: String,
+}
+
 #[derive(Debug, Error)]
 pub enum ReminderServiceError {
     #[error("database error: {0}")]
@@ -140,6 +146,7 @@ pub trait ReminderService: Send + Sync {
     fn update_reminder(&self, input: UpdateReminderInput) -> ReminderResult<ReminderDto>;
     fn delete_reminder(&self, id: &str) -> ReminderResult<()>;
     fn snooze_reminder(&self, input: SnoozeReminderInput) -> ReminderResult<ReminderDto>;
+    fn dismiss_reminder(&self, input: DismissReminderInput) -> ReminderResult<ReminderDto>;
     fn get_due_reminders(&self) -> ReminderResult<Vec<ReminderDto>>;
     fn mark_reminder_sent(&self, id: &str) -> ReminderResult<ReminderDto>;
 }

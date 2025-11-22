@@ -205,3 +205,91 @@ model ReportCache {
   @@index([expires_at])
 }
 
+model MonthlyPlan {
+  id                   String            @id
+  user_id              String
+  user                 User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  month                DateTime
+  total_planned_income Float             @default(0)
+  total_planned_expenses Float           @default(0)
+  total_planned_savings Float            @default(0)
+  note                 String?
+  created_at           DateTime          @default(now())
+  incomes              PlannedIncome[]
+  expenses             PlannedExpense[]
+  savings              PlannedSaving[]
+}
+
+model PlannedIncome {
+  id             String       @id
+  user_id        String
+  monthly_plan_id String
+  user           User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  monthly_plan   MonthlyPlan  @relation(fields: [monthly_plan_id], references: [id], onDelete: Cascade)
+  source_name    String
+  type           String
+  is_fixed       Boolean      @default(true)
+  expected_date  DateTime?
+  expected_amount Float
+  actual_amount  Float        @default(0)
+  account_id     String?
+  status         String       @default("planned")
+  created_at     DateTime     @default(now())
+}
+
+model PlannedExpense {
+  id             String      @id
+  user_id        String
+  monthly_plan_id String
+  user           User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  monthly_plan   MonthlyPlan @relation(fields: [monthly_plan_id], references: [id], onDelete: Cascade)
+  category_id    String?
+  label          String
+  expected_amount Float
+  actual_amount  Float       @default(0)
+  frequency      String      @default("once")
+  created_at     DateTime    @default(now())
+}
+
+model DebtAccount {
+  id                 String   @id
+  user_id            String
+  user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  name               String
+  type               String
+  principal          Float
+  interest_rate      Float
+  min_monthly_payment Float
+  due_day            Int
+  start_date         DateTime
+  end_date           DateTime?
+  current_balance    Float
+  created_at         DateTime @default(now())
+  schedules          DebtPaymentSchedule[]
+}
+
+model DebtPaymentSchedule {
+  id                   String   @id
+  debt_account_id      String
+  debt_account         DebtAccount @relation(fields: [debt_account_id], references: [id], onDelete: Cascade)
+  due_date             DateTime
+  planned_payment      Float
+  planned_interest     Float
+  planned_principal    Float
+  is_paid              Boolean  @default(false)
+  transaction_id       String?
+  created_at           DateTime @default(now())
+}
+
+model PlannedSaving {
+  id             String      @id
+  user_id        String
+  monthly_plan_id String
+  user           User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  monthly_plan   MonthlyPlan @relation(fields: [monthly_plan_id], references: [id], onDelete: Cascade)
+  goal_id        String?
+  expected_amount Float
+  actual_amount  Float       @default(0)
+  created_at     DateTime    @default(now())
+}
+

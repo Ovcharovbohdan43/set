@@ -163,6 +163,15 @@ mod tests {
             ))
         }
 
+        fn dismiss_reminder(
+            &self,
+            _input: crate::services::reminders::DismissReminderInput,
+        ) -> crate::services::reminders::ReminderResult<ReminderDto> {
+            Err(crate::services::reminders::ReminderServiceError::Internal(
+                "not implemented".to_string(),
+            ))
+        }
+
         fn get_due_reminders(
             &self,
         ) -> crate::services::reminders::ReminderResult<Vec<ReminderDto>> {

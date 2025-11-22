@@ -8,6 +8,7 @@ mod reports;
 mod settings;
 mod sync;
 mod transactions;
+mod planning;
 
 pub use budgets::*;
 pub use dashboard::*;
@@ -19,6 +20,7 @@ pub use reports::*;
 pub use settings::*;
 pub use sync::*;
 pub use transactions::*;
+pub use planning::*;
 
 use serde::Serialize;
 use tauri::State;
